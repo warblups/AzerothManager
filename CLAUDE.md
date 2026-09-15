@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle : la coquille (navigation, thème sombre, barre d'état, bandeau Production) et la **verticale Configuration des serveurs** sont en place — CRUD des profils, chiffrement DPAPI, tests MySQL et SSH, sélection du serveur actif. Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle : la coquille (navigation, thème sombre, barre d'état, bandeau Production), la **Configuration des serveurs** et la **Console GM (SOAP)** sont en place — CRUD des profils, chiffrement DPAPI, tests MySQL et SSH, sélection du serveur actif. Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : console SQL (AvalonEdit, pas encore référencé) et `GmCommandService`, puis le catalogue d'objets.
+**Prochaine étape** : console SQL (AvalonEdit, pas encore référencé), puis le catalogue d'objets.
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -91,7 +91,14 @@ Règle structurante — chaque fonction passe par une commande GM, par du SQL, o
 - **SQL** — la masse, le hors-ligne, l'historique et l'analyse : modifier des milliers d'objets, inspecter un joueur déconnecté, corréler, restaurer un personnage supprimé.
 - **Les deux** — toute écriture dans `world` : SQL pour l'écriture, puis `.reload` pour la prise en compte.
 
-Le `GmCommandService` est donc transverse et utilisé par la majorité des modules — ce n'est **pas** la vue de l'onglet console. Canal de transport à trancher à l'implémentation : SOAP du worldserver (préférable, il retourne le résultat) ou console distante via SSH.
+Le `GmCommandService` est donc transverse et utilisé par la majorité des modules — ce n'est **pas** la vue de l'onglet console.
+
+**Canal tranché : SOAP.** Vérifié dans les sources AzerothCore (`src/server/apps/worldserver/ACSoap`) — espace de noms `urn:AC`, préfixe `ns1`, méthode `executeCommand(command) -> result`, authentification HTTP Basic avec un **compte de jeu de niveau `SEC_ADMINISTRATOR` (gmlevel 3)**, pas l'utilisateur MySQL.
+
+Deux pièges qui ont dicté l'implémentation :
+
+- `SOAP.IP` vaut `127.0.0.1` par défaut : le port n'est pas joignable depuis l'extérieur. Et l'authentification Basic circule **en clair**. D'où le **tunnel SSH** (`ForwardedPortLocal`, port local 0) plutôt qu'exposer `SOAP.IP` sur le réseau. Le tunnel est monté par appel — simple, sans état partagé ; à mettre en cache si la latence gêne.
+- En mode lecture seule, les commandes GM sont refusées **sauf** une liste blanche d'informatives (`GmCommandService.ReadOnlyAllowed` : `server info`, `pinfo`, `lookup`, `ticket list`…), une commande GM étant par défaut une écriture.
 
 ## Modules d'administration de jeu (CdC §9)
 

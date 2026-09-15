@@ -49,6 +49,7 @@ public partial class App : Application
         var context = new ServerContext();
         var mySql = new MySqlService(context);
         var ssh = new SshService(context);
+        var gm = new GmCommandService(context);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -56,8 +57,9 @@ public partial class App : Application
             ? $"Serveur actif : {context.DisplayName}"
             : "Aucun serveur actif — commencez par créer un profil.";
 
-        var serverConfig = new ServerConfigViewModel(profiles, context, mySql, ssh);
-        var main = new MainViewModel(context, serverConfig);
+        var serverConfig = new ServerConfigViewModel(profiles, context, mySql, ssh, gm);
+        var gmConsole = new GmConsoleViewModel(gm, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole);
 
         new MainWindow { DataContext = main }.Show();
     }

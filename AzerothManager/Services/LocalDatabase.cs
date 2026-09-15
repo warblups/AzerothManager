@@ -102,6 +102,39 @@ public static class LocalDatabase
             );
             """;
         cmd.ExecuteNonQuery();
+
+        Migrate(cnx);
+    }
+
+    /// <summary>
+    /// Migrations additives. SQLite ne sait pas faire ADD COLUMN IF NOT EXISTS :
+    /// on lit les colonnes existantes et on ajoute ce qui manque.
+    /// </summary>
+    private static void Migrate(SqliteConnection cnx)
+    {
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var info = cnx.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(Servers)";
+            using var rd = info.ExecuteReader();
+            while (rd.Read()) existing.Add(rd.GetString(1));
+        }
+
+        (string Column, string Definition)[] additions =
+        [
+            ("SoapPort", "INTEGER NOT NULL DEFAULT 7878"),
+            ("SoapUser", "TEXT NOT NULL DEFAULT ''"),
+            ("SoapPassword", "TEXT NOT NULL DEFAULT ''"),
+            ("SoapThroughSshTunnel", "INTEGER NOT NULL DEFAULT 1")
+        ];
+
+        foreach (var (column, definition) in additions)
+        {
+            if (existing.Contains(column)) continue;
+            using var alter = cnx.CreateCommand();
+            alter.CommandText = $"ALTER TABLE Servers ADD COLUMN {column} {definition}";
+            alter.ExecuteNonQuery();
+        }
     }
 
     /// <summary>Journalise une action dans l'historique local (cf. §21 : SQL et commandes GM comprises).</summary>

@@ -37,6 +37,15 @@ public partial class ServerProfile : ObservableObject
     [ObservableProperty] private string _charactersDatabase = "acore_characters";
     [ObservableProperty] private string _worldDatabase = "acore_world";
 
+    // SOAP : canal d'exécution des commandes GM (§16).
+    // AzerothCore écoute par défaut sur 127.0.0.1:7878 uniquement, et l'authentification
+    // HTTP Basic circule en clair : pour un serveur distant, on tunnelle via SSH plutôt
+    // que d'ouvrir SOAP.IP sur le réseau.
+    [ObservableProperty] private int _soapPort = 7878;
+    [ObservableProperty] private string _soapUser = "";
+    [ObservableProperty] private string _soapPassword = "";
+    [ObservableProperty] private bool _soapThroughSshTunnel = true;
+
     // SSH / SFTP (serveur Linux, ou serveur Windows distant)
     [ObservableProperty] private int _sshPort = 22;
     [ObservableProperty] private string _sshUser = "";

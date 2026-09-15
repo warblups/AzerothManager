@@ -134,6 +134,29 @@
                 <TextBlock Text="Mot de passe" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding SshPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
 
+                <TextBlock Text="SOAP — commandes GM" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="Compte de jeu de niveau administrateur (gmlevel 3), pas l'utilisateur MySQL."
+                           Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="90" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Compte" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding SoapUser, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Port" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding SoapPort, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="Mot de passe du compte" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding SoapPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+                <CheckBox IsChecked="{Binding SoapThroughSshTunnel}"
+                          Content="Passer par un tunnel SSH (recommandé : SOAP.IP reste sur 127.0.0.1)" />
+
                 <TextBlock Text="Chemins sur le serveur" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Racine du serveur" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding ServerPath, UpdateSourceTrigger=PropertyChanged}" />
@@ -159,6 +182,8 @@
                         <Button Content="Tester MySQL" Command="{Binding TestMySqlCommand}"
                                 IsEnabled="{Binding HasSelection}" />
                         <Button Content="Tester SSH" Command="{Binding TestSshCommand}"
+                                IsEnabled="{Binding HasSelection}" />
+                        <Button Content="Tester SOAP" Command="{Binding TestSoapCommand}"
                                 IsEnabled="{Binding HasSelection}" />
                     </StackPanel>
                     <TextBlock Text="{Binding TestOutput}" Style="{StaticResource Caption}"

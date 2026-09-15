@@ -10,10 +10,14 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
+            <views:NotBoolConverter x:Key="NotBool" />
 
             <!-- Association ViewModel -> Vue -->
             <DataTemplate DataType="{x:Type vm:ServerConfigViewModel}">
                 <views:ServerConfigView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:GmConsoleViewModel}">
+                <views:GmConsoleView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

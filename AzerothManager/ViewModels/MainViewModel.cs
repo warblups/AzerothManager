@@ -22,7 +22,8 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private NavigationItem? _selectedItem;
 
-    public MainViewModel(ServerContext context, ServerConfigViewModel serverConfig)
+    public MainViewModel(ServerContext context, ServerConfigViewModel serverConfig,
+                         GmConsoleViewModel gmConsole)
     {
         Context = context;
 
@@ -34,12 +35,19 @@ public partial class MainViewModel : ObservableObject
             Content = serverConfig
         });
 
+        Items.Add(new NavigationItem
+        {
+            Title = "Console GM",
+            Version = "v1.0",
+            IsAvailable = true,
+            Content = gmConsole
+        });
+
         // Modules planifiés : affichés dès maintenant pour que l'ordre de construction
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (title, version) in new (string, string)[]
         {
             ("Console SQL", "v1.0"),
-            ("Console GM", "v1.0"),
             ("Comptes", "v1.0"),
             ("Personnages", "v1.0"),
             ("Catalogue d'objets", "v1.0"),

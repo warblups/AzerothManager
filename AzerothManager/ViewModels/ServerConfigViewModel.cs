@@ -14,6 +14,7 @@ public partial class ServerConfigViewModel : ObservableObject
     private readonly ServerContext _context;
     private readonly MySqlService _mySql;
     private readonly SshService _ssh;
+    private readonly GmCommandService _gm;
 
     public ObservableCollection<ServerProfile> Profiles { get; } = [];
 
@@ -30,12 +31,13 @@ public partial class ServerConfigViewModel : ObservableObject
     public bool HasSelection => Selected is not null;
 
     public ServerConfigViewModel(ServerProfileService profiles, ServerContext context,
-                                 MySqlService mySql, SshService ssh)
+                                 MySqlService mySql, SshService ssh, GmCommandService gm)
     {
         _profiles = profiles;
         _context = context;
         _mySql = mySql;
         _ssh = ssh;
+        _gm = gm;
         Reload();
     }
 
@@ -113,6 +115,22 @@ public partial class ServerConfigViewModel : ObservableObject
                 ? $"MySQL OK ({r.ElapsedMs} ms) — {r.Message}"
                 : $"MySQL ÉCHEC ({r.ElapsedMs} ms) — {r.Message}";
             if (Selected.IsActive) _context.LatencyMs = r.ElapsedMs;
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task TestSoapAsync()
+    {
+        if (Selected is null) return;
+        IsBusy = true;
+        TestOutput = "Commande GM « server info » via SOAP…";
+        try
+        {
+            var r = await _gm.TestAsync(Selected);
+            TestOutput = r.Success
+                ? $"SOAP OK ({r.ElapsedMs} ms) — {r.Output.ReplaceLineEndings(" / ").Trim()}"
+                : $"SOAP ÉCHEC ({r.ElapsedMs} ms) — {r.Output}";
         }
         finally { IsBusy = false; }
     }

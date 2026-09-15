@@ -32,11 +32,13 @@ public sealed class ServerProfileService
               INSERT INTO Servers
                 (Name, Environment, Os, Host, MySqlPort, MySqlUser, MySqlPassword,
                  AuthDatabase, CharactersDatabase, WorldDatabase,
-                 SshPort, SshUser, SshPassword, ServerPath, LogsPath, DbcPath, ReadOnly, IsActive)
+                 SshPort, SshUser, SshPassword, ServerPath, LogsPath, DbcPath, ReadOnly, IsActive,
+                 SoapPort, SoapUser, SoapPassword, SoapThroughSshTunnel)
               VALUES
                 ($name, $env, $os, $host, $myport, $myuser, $mypwd,
                  $authdb, $chardb, $worlddb,
-                 $sshport, $sshuser, $sshpwd, $path, $logs, $dbc, $ro, $active);
+                 $sshport, $sshuser, $sshpwd, $path, $logs, $dbc, $ro, $active,
+                 $soapport, $soapuser, $soappwd, $soaptunnel);
               SELECT last_insert_rowid();
               """
             : """
@@ -45,7 +47,9 @@ public sealed class ServerProfileService
                 MySqlPort=$myport, MySqlUser=$myuser, MySqlPassword=$mypwd,
                 AuthDatabase=$authdb, CharactersDatabase=$chardb, WorldDatabase=$worlddb,
                 SshPort=$sshport, SshUser=$sshuser, SshPassword=$sshpwd,
-                ServerPath=$path, LogsPath=$logs, DbcPath=$dbc, ReadOnly=$ro, IsActive=$active
+                ServerPath=$path, LogsPath=$logs, DbcPath=$dbc, ReadOnly=$ro, IsActive=$active,
+                SoapPort=$soapport, SoapUser=$soapuser, SoapPassword=$soappwd,
+                SoapThroughSshTunnel=$soaptunnel
               WHERE Id=$id;
               SELECT $id;
               """;
@@ -69,6 +73,10 @@ public sealed class ServerProfileService
         cmd.Parameters.AddWithValue("$dbc", p.DbcPath);
         cmd.Parameters.AddWithValue("$ro", p.ReadOnly ? 1 : 0);
         cmd.Parameters.AddWithValue("$active", p.IsActive ? 1 : 0);
+        cmd.Parameters.AddWithValue("$soapport", p.SoapPort);
+        cmd.Parameters.AddWithValue("$soapuser", p.SoapUser);
+        cmd.Parameters.AddWithValue("$soappwd", CredentialProtector.Protect(p.SoapPassword));
+        cmd.Parameters.AddWithValue("$soaptunnel", p.SoapThroughSshTunnel ? 1 : 0);
 
         p.Id = Convert.ToInt32(cmd.ExecuteScalar());
     }
@@ -124,6 +132,10 @@ public sealed class ServerProfileService
         LogsPath = rd.GetString(rd.GetOrdinal("LogsPath")),
         DbcPath = rd.GetString(rd.GetOrdinal("DbcPath")),
         ReadOnly = rd.GetInt32(rd.GetOrdinal("ReadOnly")) != 0,
-        IsActive = rd.GetInt32(rd.GetOrdinal("IsActive")) != 0
+        IsActive = rd.GetInt32(rd.GetOrdinal("IsActive")) != 0,
+        SoapPort = rd.GetInt32(rd.GetOrdinal("SoapPort")),
+        SoapUser = rd.GetString(rd.GetOrdinal("SoapUser")),
+        SoapPassword = CredentialProtector.Unprotect(rd.GetString(rd.GetOrdinal("SoapPassword"))),
+        SoapThroughSshTunnel = rd.GetInt32(rd.GetOrdinal("SoapThroughSshTunnel")) != 0
     };
 }
