@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build outputs
+bin/
+obj/
+publish/
+publish_test/
+
+# Backups
+Backup/
+
+# Claude Code
+.claude/
+
+# Fichiers temporaires Word (cahier des charges ouvert)
+~$*.docx
+
+# Configuration locale et base SQLite de l'application
+*.db
+*.db-shm
+*.db-wal
+config.json
