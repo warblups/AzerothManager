@@ -1,0 +1,170 @@
+<UserControl x:Class="AzerothManager.Views.ServerConfigView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             Background="{StaticResource Bg}">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Liste des profils -->
+        <DockPanel Grid.Column="0" Margin="0,0,12,0">
+            <TextBlock DockPanel.Dock="Top" Text="Profils" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
+                <Button Content="Nouveau" Command="{Binding NewCommand}" />
+                <Button Content="Supprimer" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}" />
+            </StackPanel>
+            <Border BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="2,3">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <Border Background="{StaticResource Production}" Margin="6,0,0,0" Padding="4,0"
+                                            Visibility="{Binding IsProduction, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="PROD" FontSize="10" />
+                                    </Border>
+                                    <Border Background="{StaticResource Accent}" Margin="6,0,0,0" Padding="4,0"
+                                            Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="ACTIF" FontSize="10" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Host}" Style="{StaticResource Caption}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </DockPanel>
+
+        <!-- Détail du profil -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                      IsEnabled="{Binding HasSelection}">
+            <StackPanel DataContext="{Binding Selected}" Margin="0,0,8,0">
+
+                <TextBlock Text="Identification" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="160" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="160" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Nom" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Environnement" Style="{StaticResource Caption}" />
+                        <ComboBox ItemsSource="{Binding DataContext.Environments, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  SelectedItem="{Binding Environment}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Système" Style="{StaticResource Caption}" />
+                        <ComboBox ItemsSource="{Binding DataContext.OperatingSystems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  SelectedItem="{Binding Os}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Adresse" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" />
+
+                <TextBlock Text="MySQL" Style="{StaticResource SectionTitle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="90" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Utilisateur" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding MySqlUser, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Port" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding MySqlPort, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="Mot de passe (chiffré DPAPI à l'enregistrement)" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding MySqlPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Base auth" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding AuthDatabase, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Base characters" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding CharactersDatabase, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Base world" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding WorldDatabase, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="SSH / SFTP" Style="{StaticResource SectionTitle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="90" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Utilisateur" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding SshUser, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Port" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding SshPort, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="Mot de passe" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding SshPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+
+                <TextBlock Text="Chemins sur le serveur" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="Racine du serveur" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding ServerPath, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="Logs" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding LogsPath, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="DBC extraits (armurerie)" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding DbcPath, UpdateSourceTrigger=PropertyChanged}" />
+
+                <CheckBox Content="Mode lecture seule (les services refusent toute écriture)"
+                          IsChecked="{Binding ReadOnly}" Margin="0,8,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Barre d'actions + retour de test, ancrée en bas de la colonne de détail -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Background="{StaticResource Bg}">
+            <Border BorderBrush="{StaticResource BorderB}" BorderThickness="0,1,0,0" Padding="0,8,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Enregistrer" Style="{StaticResource AccentButton}"
+                                Command="{Binding SaveCommand}" IsEnabled="{Binding HasSelection}" />
+                        <Button Content="Définir comme actif" Command="{Binding ActivateCommand}"
+                                IsEnabled="{Binding HasSelection}" />
+                        <Button Content="Tester MySQL" Command="{Binding TestMySqlCommand}"
+                                IsEnabled="{Binding HasSelection}" />
+                        <Button Content="Tester SSH" Command="{Binding TestSshCommand}"
+                                IsEnabled="{Binding HasSelection}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding TestOutput}" Style="{StaticResource Caption}"
+                               TextWrapping="Wrap" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

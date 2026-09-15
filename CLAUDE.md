@@ -4,7 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Le dossier ne contient **aucun code**, uniquement le cahier des charges. La référence est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Ce cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
+Solution scaffoldée et fonctionnelle : la coquille (navigation, thème sombre, barre d'état, bandeau Production) et la **verticale Configuration des serveurs** sont en place — CRUD des profils, chiffrement DPAPI, tests MySQL et SSH, sélection du serveur actif. Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
+
+La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
+
+**Prochaine étape** : console SQL (AvalonEdit, pas encore référencé) et `GmCommandService`, puis le catalogue d'objets.
+
+Conventions déjà établies dans le code, à suivre :
+
+- Composition manuelle dans `App.OnStartup` — pas de conteneur d'injection, l'échelle ne le justifie pas.
+- `ServerContext` porte le profil actif ; les services le lisent **à chaque opération** plutôt que de mettre en cache une chaîne de connexion, pour que le changement de profil les reconfigure tous.
+- Le mode lecture seule est appliqué dans `MySqlService.ExecuteAsync`, pas dans l'UI.
+- `LocalDatabase.LogHistory` journalise SQL, commandes GM et actions dans la même table.
+- `ServerProfile` est un `ObservableObject` : le modèle porte la notification, assumé pour éviter une couche de DTO inutile.
 
 Le `.docx` est souvent ouvert dans Word (fichier verrouillé). Pour le relire, copier via un `FileStream` en mode `ReadWrite` share, dézipper, puis extraire le texte de `word/document.xml`.
 
@@ -144,6 +156,17 @@ Points à trancher avant d'implémenter le point 3, à ne pas supposer résolus 
 - **v2.0** — visualiseur 3D, cartes, éditeur de spawns graphique, économie et anti-triche.
 
 **Ordre de construction imposé par les dépendances, à l'intérieur de la v1.0** : configuration des serveurs → accès MySQL → console SQL et `GmCommandService` → catalogue d'objets → les modules qui s'appuient dessus.
+
+### Contexte d'usage — ce qu'il ne faut pas construire
+
+Outil personnel, pour un serveur fréquenté par quelques amis / une guilde. En conséquence :
+
+- **Pas de rôles ni de permissions.** Le mode lecture seule reste, mais comme garde-fou contre la fausse manip en production, pas comme gestion d'accès.
+- **Pas d'infra de tests lourde, pas de CI, pas d'installeur signé.**
+- L'historique sert à retrouver ce qu'on a fait il y a trois jours, pas à arbitrer entre administrateurs.
+- Priorité : outils GM et édition du monde d'abord, puis courrier et restauration. Modération légère ; économie et anti-triche en dernier.
+
+Le multi-serveurs et l'exigence de densité de l'interface ne sont **pas** concernés par cet allègement : il y a une prod et un bac à sable, et c'est l'outil du quotidien.
 
 Deux briques sont transverses et se construisent en premier, jamais comme de simples onglets :
 
