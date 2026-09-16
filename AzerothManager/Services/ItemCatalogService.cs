@@ -9,6 +9,7 @@ public sealed record ItemFilter(
     int? Class = null,
     int? MinItemLevel = null,
     int? MaxItemLevel = null,
+    string? Locale = null,
     int Page = 0,
     int PageSize = 100);
 
@@ -35,40 +36,56 @@ public sealed class ItemCatalogService
         var where = new List<string>();
         var parameters = new List<MySqlParameter>();
 
+        // Les noms traduits vivent dans item_template_locale (8 langues sur le serveur de test,
+        // 42 544 entrées frFR pour 46 098 objets). COALESCE retombe sur l'anglais quand la
+        // traduction manque, plutôt que d'afficher un vide.
+        var localized = !string.IsNullOrWhiteSpace(filter.Locale);
+        var join = localized
+            ? "LEFT JOIN item_template_locale l ON l.ID = t.entry AND l.locale = @locale"
+            : "";
+        var nameExpr = localized ? "COALESCE(NULLIF(l.Name, ''), t.name)" : "t.name";
+        if (localized) parameters.Add(new MySqlParameter("@locale", filter.Locale));
+
         if (!string.IsNullOrWhiteSpace(filter.Text))
         {
             // Une saisie purement numérique cherche l'identifiant autant que le nom :
             // l'administrateur connaît souvent l'entry, pas le libellé exact.
+            // La recherche porte sur les deux libellés : on cherche parfois avec le nom
+            // anglais trouvé sur un site, parfois avec le nom vu en jeu.
+            var nameMatch = localized
+                ? "(t.name LIKE @like OR l.Name LIKE @like)"
+                : "t.name LIKE @like";
+
             if (int.TryParse(filter.Text.Trim(), out var entry))
             {
-                where.Add("(entry = @entry OR name LIKE @like)");
+                where.Add($"(t.entry = @entry OR {nameMatch})");
                 parameters.Add(new MySqlParameter("@entry", entry));
             }
             else
             {
-                where.Add("name LIKE @like");
+                where.Add(nameMatch);
             }
             parameters.Add(new MySqlParameter("@like", "%" + filter.Text.Trim() + "%"));
         }
 
         if (filter.Quality is { } q)
         {
-            where.Add("Quality = @quality");
+            where.Add("t.Quality = @quality");
             parameters.Add(new MySqlParameter("@quality", q));
         }
         if (filter.Class is { } c)
         {
-            where.Add("`class` = @class");
+            where.Add("t.`class` = @class");
             parameters.Add(new MySqlParameter("@class", c));
         }
         if (filter.MinItemLevel is { } min)
         {
-            where.Add("ItemLevel >= @minlvl");
+            where.Add("t.ItemLevel >= @minlvl");
             parameters.Add(new MySqlParameter("@minlvl", min));
         }
         if (filter.MaxItemLevel is { } max)
         {
-            where.Add("ItemLevel <= @maxlvl");
+            where.Add("t.ItemLevel <= @maxlvl");
             parameters.Add(new MySqlParameter("@maxlvl", max));
         }
 
@@ -79,7 +96,7 @@ public sealed class ItemCatalogService
         int total;
         await using (var countCmd = cnx.CreateCommand())
         {
-            countCmd.CommandText = $"SELECT COUNT(*) FROM item_template {clause}";
+            countCmd.CommandText = $"SELECT COUNT(*) FROM item_template t {join} {clause}";
             foreach (var p in parameters) countCmd.Parameters.Add(Clone(p));
             total = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
         }
@@ -88,11 +105,13 @@ public sealed class ItemCatalogService
         await using (var cmd = cnx.CreateCommand())
         {
             cmd.CommandText = $"""
-                SELECT entry, name, Quality, ItemLevel, RequiredLevel, `class`, subclass,
-                       InventoryType, displayid, SellPrice, BuyPrice, stackable
-                FROM item_template
+                SELECT t.entry, {nameExpr} AS display_name, t.name, t.Quality, t.ItemLevel,
+                       t.RequiredLevel, t.`class`, t.subclass, t.InventoryType, t.displayid,
+                       t.SellPrice, t.BuyPrice, t.stackable
+                FROM item_template t
+                {join}
                 {clause}
-                ORDER BY Quality DESC, ItemLevel DESC, entry
+                ORDER BY t.Quality DESC, t.ItemLevel DESC, t.entry
                 LIMIT @take OFFSET @skip
                 """;
             foreach (var p in parameters) cmd.Parameters.Add(Clone(p));
@@ -103,9 +122,9 @@ public sealed class ItemCatalogService
             while (await rd.ReadAsync(ct))
             {
                 items.Add(new ItemSummary(
-                    rd.GetInt32(0), rd.GetString(1), rd.GetInt32(2), rd.GetInt32(3), rd.GetInt32(4),
-                    rd.GetInt32(5), rd.GetInt32(6), rd.GetInt32(7), rd.GetInt32(8),
-                    rd.GetInt64(9), rd.GetInt64(10), rd.GetInt32(11)));
+                    rd.GetInt32(0), rd.GetString(1), rd.GetString(2), rd.GetInt32(3), rd.GetInt32(4),
+                    rd.GetInt32(5), rd.GetInt32(6), rd.GetInt32(7), rd.GetInt32(8), rd.GetInt32(9),
+                    rd.GetInt64(10), rd.GetInt64(11), rd.GetInt32(12)));
             }
         }
 
@@ -113,9 +132,9 @@ public sealed class ItemCatalogService
     }
 
     /// <summary>Un objet précis par son entry, pour les modules qui en reçoivent l'identifiant.</summary>
-    public async Task<ItemSummary?> GetAsync(int entry, CancellationToken ct = default)
+    public async Task<ItemSummary?> GetAsync(int entry, string? locale = null, CancellationToken ct = default)
     {
-        var result = await SearchAsync(new ItemFilter(Text: entry.ToString(), PageSize: 1), ct);
+        var result = await SearchAsync(new ItemFilter(Text: entry.ToString(), Locale: locale, PageSize: 1), ct);
         return result.Items.FirstOrDefault(i => i.Entry == entry);
     }
 

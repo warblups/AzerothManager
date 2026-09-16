@@ -41,6 +41,9 @@ public partial class ItemCatalogViewModel : ObservableObject
     [ObservableProperty] private NamedValue? _quality;
     [ObservableProperty] private NamedValue? _class;
     [ObservableProperty] private string _minLevel = "";
+
+    /// <summary>Noms traduits depuis item_template_locale. Choix persisté dans les préférences.</summary>
+    [ObservableProperty] private bool _frenchNames = true;
     [ObservableProperty] private string _maxLevel = "";
     [ObservableProperty] private ItemSummary? _selected;
     [ObservableProperty] private bool _isBusy;
@@ -63,7 +66,11 @@ public partial class ItemCatalogViewModel : ObservableObject
         _context = context;
         Quality = Qualities[0];
         Class = Classes[0];
+        FrenchNames = LocalDatabase.GetSetting("catalog.locale", "frFR") == "frFR";
     }
+
+    partial void OnFrenchNamesChanged(bool value) =>
+        LocalDatabase.SetSetting("catalog.locale", value ? "frFR" : "");
 
     [RelayCommand]
     private async Task SearchAsync()
@@ -111,6 +118,7 @@ public partial class ItemCatalogViewModel : ObservableObject
                 Class: Class?.Value,
                 MinItemLevel: int.TryParse(MinLevel, out var min) ? min : null,
                 MaxItemLevel: int.TryParse(MaxLevel, out var max) ? max : null,
+                Locale: FrenchNames ? "frFR" : null,
                 Page: Page,
                 PageSize: PageSize);
 

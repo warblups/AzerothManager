@@ -8,6 +8,7 @@ namespace AzerothManager.Models;
 public sealed record ItemSummary(
     int Entry,
     string Name,
+    string NameEn,
     int Quality,
     int ItemLevel,
     int RequiredLevel,
@@ -19,6 +20,9 @@ public sealed record ItemSummary(
     long BuyPrice,
     int Stackable)
 {
+    /// <summary>Vrai si le nom affiché est une traduction ; l'anglais reste utile pour les commandes GM et les sources externes.</summary>
+    public bool IsTranslated => !string.Equals(Name, NameEn, StringComparison.Ordinal);
+
     public string QualityName => ItemReference.QualityName(Quality);
     public string ClassName => ItemReference.ClassName(Class);
     public string SlotName => ItemReference.InventoryTypeName(InventoryType);

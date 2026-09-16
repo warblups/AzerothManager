@@ -52,7 +52,10 @@
                 <TextBlock Text="ilvl max" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding MaxLevel, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
-            <StackPanel Grid.Column="10" VerticalAlignment="Bottom">
+            <StackPanel Grid.Column="10" VerticalAlignment="Bottom" Orientation="Horizontal">
+                <CheckBox Content="Noms français" IsChecked="{Binding FrenchNames}"
+                          VerticalAlignment="Center" Margin="0,0,10,6"
+                          ToolTip="Noms traduits depuis item_template_locale, avec repli sur l'anglais quand la traduction manque." />
                 <Button Content="🔍  Rechercher" Style="{StaticResource SuccessButton}"
                         Command="{Binding SearchCommand}" Margin="0,0,0,6" />
             </StackPanel>
@@ -73,6 +76,8 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Nom d'origine" Binding="{Binding NameEn}" Width="200"
+                                    FontStyle="Italic" />
                 <DataGridTextColumn Header="Qualité" Binding="{Binding QualityName}" Width="90" />
                 <DataGridTextColumn Header="ilvl" Binding="{Binding ItemLevel}" Width="55" />
                 <DataGridTextColumn Header="Niv. requis" Binding="{Binding RequiredLevel}" Width="75" />

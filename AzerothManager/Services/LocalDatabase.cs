@@ -137,6 +137,26 @@ public static class LocalDatabase
         }
     }
 
+    /// <summary>Lit une préférence utilisateur (table Settings du §20).</summary>
+    public static string GetSetting(string key, string fallback = "")
+    {
+        using var cnx = Open();
+        using var cmd = cnx.CreateCommand();
+        cmd.CommandText = "SELECT Value FROM Settings WHERE Key = $k";
+        cmd.Parameters.AddWithValue("$k", key);
+        return cmd.ExecuteScalar() as string ?? fallback;
+    }
+
+    public static void SetSetting(string key, string value)
+    {
+        using var cnx = Open();
+        using var cmd = cnx.CreateCommand();
+        cmd.CommandText = "INSERT INTO Settings (Key, Value) VALUES ($k, $v) ON CONFLICT(Key) DO UPDATE SET Value = $v";
+        cmd.Parameters.AddWithValue("$k", key);
+        cmd.Parameters.AddWithValue("$v", value);
+        cmd.ExecuteNonQuery();
+    }
+
     /// <summary>Journalise une action dans l'historique local (cf. §21 : SQL et commandes GM comprises).</summary>
     public static void LogHistory(int? serverId, string kind, string content, string result = "", int rowsTouched = 0)
     {
