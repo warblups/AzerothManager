@@ -40,6 +40,10 @@ public partial class ItemCatalogViewModel : ObservableObject
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private NamedValue? _quality;
     [ObservableProperty] private NamedValue? _class;
+
+    /// <summary>Sous-types de la classe choisie : « Épée à deux mains » plutôt que « Arme ».</summary>
+    public ObservableCollection<NamedValue> Subclasses { get; } = [];
+    [ObservableProperty] private NamedValue? _subclass;
     [ObservableProperty] private string _minLevel = "";
 
     /// <summary>Noms traduits depuis item_template_locale. Choix persisté dans les préférences.</summary>
@@ -74,6 +78,26 @@ public partial class ItemCatalogViewModel : ObservableObject
         Quality = Qualities[0];
         Class = Classes[0];
         FrenchNames = LocalDatabase.GetSetting("catalog.locale", "frFR") == "frFR";
+        RefreshSubclasses();
+    }
+
+    partial void OnClassChanged(NamedValue? value) => RefreshSubclasses();
+
+    /// <summary>
+    /// La liste des sous-types dépend de la classe : les valeurs numériques n'ont pas
+    /// le même sens d'une classe à l'autre, 7 vaut « Épée » pour une arme et « Libram »
+    /// pour une armure.
+    /// </summary>
+    private void RefreshSubclasses()
+    {
+        Subclasses.Clear();
+        Subclasses.Add(new NamedValue(null, "Tous les types"));
+
+        if (Class?.Value is { } c)
+            foreach (var (value, label) in ItemReference.Subclasses(c))
+                Subclasses.Add(new NamedValue(value, label));
+
+        Subclass = Subclasses[0];
     }
 
     partial void OnFrenchNamesChanged(bool value) =>
@@ -123,6 +147,7 @@ public partial class ItemCatalogViewModel : ObservableObject
                 Text: string.IsNullOrWhiteSpace(Search) ? null : Search,
                 Quality: Quality?.Value,
                 Class: Class?.Value,
+                Subclass: Subclass?.Value,
                 MinItemLevel: int.TryParse(MinLevel, out var min) ? min : null,
                 MaxItemLevel: int.TryParse(MaxLevel, out var max) ? max : null,
                 Locale: FrenchNames ? "frFR" : null,

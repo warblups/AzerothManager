@@ -19,6 +19,8 @@
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="150" />
                 <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="70" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="70" />
@@ -45,14 +47,19 @@
                           DisplayMemberPath="Label" />
             </StackPanel>
             <StackPanel Grid.Column="6">
+                <TextBlock Text="Type" Style="{StaticResource Caption}" />
+                <ComboBox ItemsSource="{Binding Subclasses}" SelectedItem="{Binding Subclass}"
+                          DisplayMemberPath="Label" />
+            </StackPanel>
+            <StackPanel Grid.Column="8">
                 <TextBlock Text="ilvl min" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding MinLevel, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
-            <StackPanel Grid.Column="8">
+            <StackPanel Grid.Column="10">
                 <TextBlock Text="ilvl max" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding MaxLevel, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
-            <StackPanel Grid.Column="10" VerticalAlignment="Bottom" Orientation="Horizontal">
+            <StackPanel Grid.Column="12" VerticalAlignment="Bottom" Orientation="Horizontal">
                 <CheckBox Content="Noms français" IsChecked="{Binding FrenchNames}"
                           VerticalAlignment="Center" Margin="0,0,10,6"
                           ToolTip="Noms traduits depuis item_template_locale, avec repli sur l'anglais quand la traduction manque." />
@@ -95,6 +102,8 @@
                                         Binding="{Binding RequiredLevel}" Width="75" />
                     <DataGridTextColumn Header="Catégorie" SortMemberPath="Class"
                                         Binding="{Binding ClassName}" Width="100" />
+                    <DataGridTextColumn Header="Type" SortMemberPath="Subclass"
+                                        Binding="{Binding SubclassName}" Width="120" />
                     <DataGridTextColumn Header="Emplacement" SortMemberPath="InventoryType"
                                         Binding="{Binding SlotName}" Width="110" />
                     <DataGridTextColumn Header="Vente" SortMemberPath="SellPrice"

@@ -7,6 +7,7 @@ public sealed record ItemFilter(
     string? Text = null,
     int? Quality = null,
     int? Class = null,
+    int? Subclass = null,
     int? MinItemLevel = null,
     int? MaxItemLevel = null,
     string? Locale = null,
@@ -80,6 +81,11 @@ public sealed class ItemCatalogService
             where.Add("t.`class` = @class");
             parameters.Add(new MySqlParameter("@class", c));
         }
+        if (filter.Subclass is { } sub)
+        {
+            where.Add("t.subclass = @subclass");
+            parameters.Add(new MySqlParameter("@subclass", sub));
+        }
         if (filter.MinItemLevel is { } min)
         {
             where.Add("t.ItemLevel >= @minlvl");
@@ -148,6 +154,7 @@ public sealed class ItemCatalogService
             nameof(ItemSummary.ItemLevel) => "t.ItemLevel",
             nameof(ItemSummary.RequiredLevel) => "t.RequiredLevel",
             nameof(ItemSummary.Class) => "t.`class`",
+            nameof(ItemSummary.Subclass) => "t.subclass",
             nameof(ItemSummary.InventoryType) => "t.InventoryType",
             nameof(ItemSummary.SellPrice) => "t.SellPrice",
             nameof(ItemSummary.Stackable) => "t.stackable",

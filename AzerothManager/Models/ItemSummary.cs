@@ -25,6 +25,7 @@ public sealed record ItemSummary(
 
     public string QualityName => ItemReference.QualityName(Quality);
     public string ClassName => ItemReference.ClassName(Class);
+    public string SubclassName => ItemReference.SubclassName(Class, Subclass);
     public string SlotName => ItemReference.InventoryTypeName(InventoryType);
     public string SellPriceText => ItemReference.Money(SellPrice);
     public string BuyPriceText => ItemReference.Money(BuyPrice);
@@ -206,6 +207,44 @@ public static class ItemReference
         8 => "bleu",
         _ => "châsse " + c
     };
+
+    /// <summary>
+    /// Sous-classes par classe, reprises des énumérations ItemSubclass* d'AzerothCore.
+    /// Seules les classes où le sous-type a un sens pour la recherche sont détaillées.
+    /// </summary>
+    public static (int Value, string Label)[] Subclasses(int itemClass) => itemClass switch
+    {
+        0 =>
+        [
+            (0, "Consommable"), (1, "Potion"), (2, "Élixir"), (3, "Flacon"), (4, "Parchemin"),
+            (5, "Nourriture et boisson"), (6, "Amélioration d'objet"), (7, "Bandage"), (8, "Autre")
+        ],
+        2 =>
+        [
+            (0, "Hache à une main"), (1, "Hache à deux mains"), (2, "Arc"), (3, "Arme à feu"),
+            (4, "Masse à une main"), (5, "Masse à deux mains"), (6, "Arme d'hast"),
+            (7, "Épée à une main"), (8, "Épée à deux mains"), (10, "Bâton"),
+            (13, "Arme de pugilat"), (14, "Divers"), (15, "Dague"), (16, "Arme de jet"),
+            (18, "Arbalète"), (19, "Baguette"), (20, "Canne à pêche")
+        ],
+        3 =>
+        [
+            (0, "Rouge"), (1, "Bleue"), (2, "Jaune"), (3, "Violette"), (4, "Verte"),
+            (5, "Orange"), (6, "Méta"), (7, "Simple"), (8, "Prismatique")
+        ],
+        4 =>
+        [
+            (0, "Divers"), (1, "Tissu"), (2, "Cuir"), (3, "Mailles"), (4, "Plaques"),
+            (5, "Targe"), (6, "Bouclier"), (7, "Libram"), (8, "Idole"), (9, "Totem"), (10, "Cachet")
+        ],
+        _ => []
+    };
+
+    public static string SubclassName(int itemClass, int subclass)
+    {
+        var match = Subclasses(itemClass).FirstOrDefault(s => s.Value == subclass);
+        return match.Label ?? $"Sous-type {subclass}";
+    }
 
     /// <summary>Convertit un prix en pièces de cuivre vers la notation or / argent / cuivre.</summary>
     public static string Money(long copper)
