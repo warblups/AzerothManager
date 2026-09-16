@@ -11,6 +11,7 @@
 
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <views:NotBoolConverter x:Key="NotBool" />
+            <views:QualityToBrushConverter x:Key="QualityToBrush" />
 
             <!-- Association ViewModel -> Vue -->
             <DataTemplate DataType="{x:Type vm:ServerConfigViewModel}">
@@ -21,6 +22,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:SqlEditorViewModel}">
                 <views:SqlEditorView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ItemCatalogViewModel}">
+                <views:ItemCatalogView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

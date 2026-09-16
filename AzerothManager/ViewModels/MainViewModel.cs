@@ -24,7 +24,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private NavigationItem? _selectedItem;
 
     public MainViewModel(ServerContext context, ServerConfigViewModel serverConfig,
-                         GmConsoleViewModel gmConsole, SqlEditorViewModel sqlConsole)
+                         GmConsoleViewModel gmConsole, SqlEditorViewModel sqlConsole,
+                         ItemCatalogViewModel itemCatalog)
     {
         Context = context;
 
@@ -48,6 +49,15 @@ public partial class MainViewModel : ObservableObject
 
         Items.Add(new NavigationItem
         {
+            Icon = "🎒",
+            Title = "Catalogue d'objets",
+            Version = "v1.0",
+            IsAvailable = true,
+            Content = itemCatalog
+        });
+
+        Items.Add(new NavigationItem
+        {
             Icon = "⌨",
             Title = "Console GM",
             Version = "v1.0",
@@ -61,7 +71,6 @@ public partial class MainViewModel : ObservableObject
         {
             ("👤", "Comptes", "v1.0"),
             ("🧙", "Personnages", "v1.0"),
-            ("🎒", "Catalogue d'objets", "v1.0"),
             ("✉", "Courrier en jeu", "v1.0"),
             ("🛡", "Modération", "v1.0"),
             ("🎫", "Tickets GM", "v1.1"),

@@ -51,6 +51,7 @@ public partial class App : Application
         var ssh = new SshService(context);
         var gm = new GmCommandService(context);
         var sqlEditor = new SqlEditorService(context, mySql);
+        var itemCatalog = new ItemCatalogService(mySql);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -61,7 +62,8 @@ public partial class App : Application
         var serverConfig = new ServerConfigViewModel(profiles, context, mySql, ssh, gm);
         var gmConsole = new GmConsoleViewModel(gm, context);
         var sqlConsole = new SqlEditorViewModel(sqlEditor, gm, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole);
+        var catalog = new ItemCatalogViewModel(itemCatalog, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog);
 
         new MainWindow { DataContext = main }.Show();
     }
