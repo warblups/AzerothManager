@@ -115,6 +115,98 @@ public static class ItemReference
         _ => t.ToString()
     };
 
+    /// <summary>Noms des statistiques, repris de l'énumération ItemModType d'AzerothCore.</summary>
+    public static string StatName(int t) => t switch
+    {
+        0 => "mana",
+        1 => "points de vie",
+        3 => "Agilité",
+        4 => "Force",
+        5 => "Intelligence",
+        6 => "Esprit",
+        7 => "Endurance",
+        12 => "score de défense",
+        13 => "score d'esquive",
+        14 => "score de parade",
+        15 => "score de blocage",
+        16 => "score de toucher (mêlée)",
+        17 => "score de toucher (distance)",
+        18 => "score de toucher (sorts)",
+        19 => "score de critique (mêlée)",
+        20 => "score de critique (distance)",
+        21 => "score de critique (sorts)",
+        22 => "score de toucher subi (mêlée)",
+        23 => "score de toucher subi (distance)",
+        24 => "score de toucher subi (sorts)",
+        25 => "score de critique subi (mêlée)",
+        26 => "score de critique subi (distance)",
+        27 => "score de critique subi (sorts)",
+        28 => "score de hâte (mêlée)",
+        29 => "score de hâte (distance)",
+        30 => "score de hâte (sorts)",
+        31 => "score de toucher",
+        32 => "score de critique",
+        33 => "score de toucher subi",
+        34 => "score de critique subi",
+        35 => "score de résilience",
+        36 => "score de hâte",
+        37 => "score d'expertise",
+        38 => "puissance d'attaque",
+        39 => "puissance d'attaque à distance",
+        41 => "soins des sorts (obsolète)",
+        42 => "dégâts des sorts (obsolète)",
+        43 => "régénération de mana",
+        44 => "score de pénétration d'armure",
+        45 => "puissance des sorts",
+        46 => "régénération de vie",
+        47 => "pénétration des sorts",
+        48 => "valeur de blocage",
+        _ => $"statistique {t}"
+    };
+
+    public static string DamageSchool(int s) => s switch
+    {
+        0 => "physiques",
+        1 => "sacrés",
+        2 => "de Feu",
+        3 => "de Nature",
+        4 => "de Givre",
+        5 => "d'Ombre",
+        6 => "arcaniques",
+        _ => ""
+    };
+
+    public static string Bonding(int b) => b switch
+    {
+        0 => "Aucune liaison",
+        1 => "Lié quand ramassé",
+        2 => "Lié quand équipé",
+        3 => "Lié quand utilisé",
+        4 => "Objet de quête lié",
+        5 => "Objet de quête lié",
+        _ => ""
+    };
+
+    public static string SpellTrigger(int t) => t switch
+    {
+        0 => "Utiliser",
+        1 => "Équipé",
+        2 => "Chance au coup",
+        4 => "Pierre d'âme",
+        5 => "Utiliser (sans délai)",
+        6 => "Apprend",
+        _ => "Déclencheur " + t
+    };
+
+    public static string SocketColor(int c) => c switch
+    {
+        1 => "méta",
+        2 => "rouge",
+        4 => "jaune",
+        8 => "bleu",
+        _ => "châsse " + c
+    };
+
     /// <summary>Convertit un prix en pièces de cuivre vers la notation or / argent / cuivre.</summary>
     public static string Money(long copper)
     {

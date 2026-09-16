@@ -46,6 +46,13 @@ public partial class ItemCatalogViewModel : ObservableObject
     [ObservableProperty] private bool _frenchNames = true;
     [ObservableProperty] private string _maxLevel = "";
     [ObservableProperty] private ItemSummary? _selected;
+
+    /// <summary>Fiche détaillée, ouverte au double-clic et mise à jour tant qu'elle reste visible.</summary>
+    [ObservableProperty] private ItemDetail? _detail;
+    [ObservableProperty] private bool _detailVisible;
+
+    [ObservableProperty] private string? _sortColumn;
+    [ObservableProperty] private bool _sortDescending;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _status = "Saisissez un nom ou un identifiant, puis lancez la recherche.";
 
@@ -119,6 +126,8 @@ public partial class ItemCatalogViewModel : ObservableObject
                 MinItemLevel: int.TryParse(MinLevel, out var min) ? min : null,
                 MaxItemLevel: int.TryParse(MaxLevel, out var max) ? max : null,
                 Locale: FrenchNames ? "frFR" : null,
+                SortColumn: SortColumn,
+                SortDescending: SortDescending,
                 Page: Page,
                 PageSize: PageSize);
 
@@ -144,6 +153,45 @@ public partial class ItemCatalogViewModel : ObservableObject
         finally
         {
             if (_pending == cts) IsBusy = false;
+        }
+    }
+
+    /// <summary>Tri demandé par un clic sur un en-tête. Relancé côté SQL : trier la page
+    /// courante en mémoire ne classerait que cent lignes sur quarante-six mille.</summary>
+    public async Task SortByAsync(string column)
+    {
+        if (SortColumn == column) SortDescending = !SortDescending;
+        else { SortColumn = column; SortDescending = false; }
+        Page = 0;
+        await LoadAsync();
+    }
+
+    [RelayCommand]
+    private async Task ShowDetailAsync()
+    {
+        if (Selected is null) return;
+        DetailVisible = true;
+        await LoadDetailAsync();
+    }
+
+    [RelayCommand]
+    private void CloseDetail() => DetailVisible = false;
+
+    partial void OnSelectedChanged(ItemSummary? value)
+    {
+        if (DetailVisible) _ = LoadDetailAsync();
+    }
+
+    private async Task LoadDetailAsync()
+    {
+        if (Selected is null) { Detail = null; return; }
+        try
+        {
+            Detail = await _catalog.GetDetailAsync(Selected.Entry, FrenchNames ? "frFR" : null);
+        }
+        catch (Exception ex)
+        {
+            Status = "Fiche indisponible : " + ex.Message;
         }
     }
 

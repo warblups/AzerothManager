@@ -10,6 +10,8 @@ public sealed record ItemFilter(
     int? MinItemLevel = null,
     int? MaxItemLevel = null,
     string? Locale = null,
+    string? SortColumn = null,
+    bool SortDescending = false,
     int Page = 0,
     int PageSize = 100);
 
@@ -111,7 +113,7 @@ public sealed class ItemCatalogService
                 FROM item_template t
                 {join}
                 {clause}
-                ORDER BY t.Quality DESC, t.ItemLevel DESC, t.entry
+                ORDER BY {OrderBy(filter, nameExpr)}
                 LIMIT @take OFFSET @skip
                 """;
             foreach (var p in parameters) cmd.Parameters.Add(Clone(p));
@@ -129,6 +131,112 @@ public sealed class ItemCatalogService
         }
 
         return new ItemSearchResult(items, total, filter.Page, filter.PageSize);
+    }
+
+    /// <summary>
+    /// Le tri se fait côté SQL. Trier la page courante en mémoire donnerait un classement
+    /// faux : il ne porterait que sur cent lignes parmi quarante-six mille.
+    /// </summary>
+    private static string OrderBy(ItemFilter filter, string nameExpr)
+    {
+        var column = filter.SortColumn switch
+        {
+            nameof(ItemSummary.Entry) => "t.entry",
+            nameof(ItemSummary.Name) => nameExpr,
+            nameof(ItemSummary.NameEn) => "t.name",
+            nameof(ItemSummary.Quality) => "t.Quality",
+            nameof(ItemSummary.ItemLevel) => "t.ItemLevel",
+            nameof(ItemSummary.RequiredLevel) => "t.RequiredLevel",
+            nameof(ItemSummary.Class) => "t.`class`",
+            nameof(ItemSummary.InventoryType) => "t.InventoryType",
+            nameof(ItemSummary.SellPrice) => "t.SellPrice",
+            nameof(ItemSummary.Stackable) => "t.stackable",
+            _ => null
+        };
+
+        if (column is null) return "t.Quality DESC, t.ItemLevel DESC, t.entry";
+        var direction = filter.SortDescending ? "DESC" : "ASC";
+        return $"{column} {direction}, t.entry";
+    }
+
+    /// <summary>
+    /// Fiche complète d'un objet. Chargée à la demande sur un seul entry : ces colonnes
+    /// n'ont pas leur place dans une liste de cent lignes.
+    /// </summary>
+    public async Task<ItemDetail?> GetDetailAsync(int entry, string? locale = null, CancellationToken ct = default)
+    {
+        var localized = !string.IsNullOrWhiteSpace(locale);
+        var join = localized
+            ? "LEFT JOIN item_template_locale l ON l.ID = t.entry AND l.locale = @locale"
+            : "";
+        var nameExpr = localized ? "COALESCE(NULLIF(l.Name, ''), t.name)" : "t.name";
+
+        await using var cnx = await _mySql.OpenAsync(MySqlService.Db.World, ct);
+        await using var cmd = cnx.CreateCommand();
+        cmd.CommandText = $"""
+            SELECT t.entry, {nameExpr} AS display_name, t.name, t.Quality, t.ItemLevel, t.RequiredLevel,
+                   t.`class`, t.subclass, t.InventoryType, t.displayid, t.SellPrice, t.BuyPrice, t.stackable,
+                   t.bonding, t.MaxDurability, t.armor, t.dmg_min1, t.dmg_max1, t.dmg_type1, t.delay,
+                   t.description,
+                   t.stat_type1, t.stat_value1, t.stat_type2, t.stat_value2, t.stat_type3, t.stat_value3,
+                   t.stat_type4, t.stat_value4, t.stat_type5, t.stat_value5, t.stat_type6, t.stat_value6,
+                   t.stat_type7, t.stat_value7, t.stat_type8, t.stat_value8, t.stat_type9, t.stat_value9,
+                   t.stat_type10, t.stat_value10,
+                   t.spellid_1, t.spelltrigger_1, t.spellid_2, t.spelltrigger_2,
+                   t.socketColor_1, t.socketColor_2, t.socketColor_3,
+                   t.holy_res, t.fire_res, t.nature_res, t.frost_res, t.shadow_res, t.arcane_res
+            FROM item_template t
+            {join}
+            WHERE t.entry = @entry
+            """;
+        if (localized) cmd.Parameters.AddWithValue("@locale", locale);
+        cmd.Parameters.AddWithValue("@entry", entry);
+
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        if (!await rd.ReadAsync(ct)) return null;
+
+        var summary = new ItemSummary(
+            rd.GetInt32(0), rd.GetString(1), rd.GetString(2), rd.GetInt32(3), rd.GetInt32(4),
+            rd.GetInt32(5), rd.GetInt32(6), rd.GetInt32(7), rd.GetInt32(8), rd.GetInt32(9),
+            rd.GetInt64(10), rd.GetInt64(11), rd.GetInt32(12));
+
+        var stats = new List<ItemStat>();
+        for (var i = 0; i < 10; i++)
+        {
+            var type = rd.GetInt32(21 + i * 2);
+            var value = rd.GetInt32(22 + i * 2);
+            if (value != 0) stats.Add(new ItemStat(type, value));
+        }
+
+        var spells = new List<ItemSpell>();
+        foreach (var (idIndex, triggerIndex) in new[] { (41, 42), (43, 44) })
+        {
+            var id = rd.GetInt32(idIndex);
+            if (id > 0) spells.Add(new ItemSpell(id, rd.GetInt32(triggerIndex)));
+        }
+
+        var sockets = new List<int>();
+        for (var i = 45; i <= 47; i++)
+        {
+            var color = rd.GetInt32(i);
+            if (color > 0) sockets.Add(color);
+        }
+
+        return new ItemDetail(
+            summary,
+            Bonding: rd.GetInt32(13),
+            Durability: rd.GetInt32(14),
+            Armor: rd.GetInt32(15),
+            DamageMin: rd.GetFloat(16),
+            DamageMax: rd.GetFloat(17),
+            DamageType: rd.GetInt32(18),
+            Delay: rd.GetInt32(19),
+            Description: rd.IsDBNull(20) ? "" : rd.GetString(20),
+            Stats: stats,
+            Spells: spells,
+            Sockets: sockets,
+            HolyRes: rd.GetInt32(48), FireRes: rd.GetInt32(49), NatureRes: rd.GetInt32(50),
+            FrostRes: rd.GetInt32(51), ShadowRes: rd.GetInt32(52), ArcaneRes: rd.GetInt32(53));
     }
 
     /// <summary>Un objet précis par son entry, pour les modules qui en reçoivent l'identifiant.</summary>
