@@ -38,18 +38,33 @@
             </StackPanel>
             <StackPanel Grid.Column="2">
                 <TextBlock Text="Qualité" Style="{StaticResource Caption}" />
-                <ComboBox ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality}"
-                          DisplayMemberPath="Label" />
+                <ComboBox ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
             <StackPanel Grid.Column="4">
                 <TextBlock Text="Catégorie" Style="{StaticResource Caption}" />
-                <ComboBox ItemsSource="{Binding Classes}" SelectedItem="{Binding Class}"
-                          DisplayMemberPath="Label" />
+                <ComboBox ItemsSource="{Binding Classes}" SelectedItem="{Binding Class}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
             <StackPanel Grid.Column="6">
                 <TextBlock Text="Type" Style="{StaticResource Caption}" />
-                <ComboBox ItemsSource="{Binding Subclasses}" SelectedItem="{Binding Subclass}"
-                          DisplayMemberPath="Label" />
+                <ComboBox ItemsSource="{Binding Subclasses}" SelectedItem="{Binding Subclass}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
             <StackPanel Grid.Column="8">
                 <TextBlock Text="ilvl min" Style="{StaticResource Caption}" />
