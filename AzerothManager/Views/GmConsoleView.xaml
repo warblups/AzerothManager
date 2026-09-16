@@ -17,7 +17,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Button Content="{Binding}" Margin="0,0,6,6"
+                    <Button Content="{Binding}" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"
                             Command="{Binding DataContext.UseShortcutCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}" />
                 </DataTemplate>
@@ -48,7 +48,7 @@
             <TextBox x:Name="CommandBox" Grid.Column="0" FontFamily="Consolas" Margin="0,0,6,0"
                      Text="{Binding Command, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="CommandBox_KeyDown" />
-            <Button Grid.Column="1" Content="▶  Envoyer" Style="{StaticResource AccentButton}"
+            <Button Grid.Column="1" Content="▶  Envoyer" Style="{StaticResource SuccessButton}"
                     Command="{Binding SendCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource NotBool}}" />
             <Button Grid.Column="2" Content="🧹  Effacer" Command="{Binding ClearCommand}" Margin="0" />
         </Grid>

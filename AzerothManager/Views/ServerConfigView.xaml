@@ -15,7 +15,7 @@
             <TextBlock DockPanel.Dock="Top" Text="Profils" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
                 <Button Content="➕  Nouveau" Command="{Binding NewCommand}" />
-                <Button Content="🗑  Supprimer" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}" />
+                <Button Content="🗑  Supprimer" Style="{StaticResource DangerButton}" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}" />
             </StackPanel>
             <Border BorderBrush="{StaticResource BorderB}" BorderThickness="1">
                 <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
@@ -185,13 +185,13 @@
                     <StackPanel Orientation="Horizontal">
                         <Button Content="💾  Enregistrer" Style="{StaticResource AccentButton}"
                                 Command="{Binding SaveCommand}" IsEnabled="{Binding HasSelection}" />
-                        <Button Content="✅  Définir comme actif" Command="{Binding ActivateCommand}"
+                        <Button Content="✅  Définir comme actif" Style="{StaticResource SuccessButton}" Command="{Binding ActivateCommand}"
                                 IsEnabled="{Binding HasSelection}" />
-                        <Button Content="🔌  Tester MySQL" Command="{Binding TestMySqlCommand}"
+                        <Button Content="🔌  Tester MySQL" Style="{StaticResource SecondaryButton}" Command="{Binding TestMySqlCommand}"
                                 IsEnabled="{Binding HasSelection}" />
-                        <Button Content="🔑  Tester SSH" Command="{Binding TestSshCommand}"
+                        <Button Content="🔑  Tester SSH" Style="{StaticResource SecondaryButton}" Command="{Binding TestSshCommand}"
                                 IsEnabled="{Binding HasSelection}" />
-                        <Button Content="⚡  Tester SOAP" Command="{Binding TestSoapCommand}"
+                        <Button Content="⚡  Tester SOAP" Style="{StaticResource SecondaryButton}" Command="{Binding TestSoapCommand}"
                                 IsEnabled="{Binding HasSelection}" />
                     </StackPanel>
                     <TextBlock Text="{Binding TestOutput}" Style="{StaticResource Caption}"

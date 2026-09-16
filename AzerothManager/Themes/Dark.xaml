@@ -132,9 +132,39 @@
         </Setter>
     </Style>
 
+    <!--
+        Boutons codés par sémantique, vocabulaire repris d'AzerothUpdater :
+        l'action se lit à la couleur avant même de lire le libellé.
+    -->
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{StaticResource Accent}" />
         <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Action positive : exécuter, activer, envoyer -->
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="#1a6b3a" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Action destructrice : supprimer -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="#8b1a1a" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- Action secondaire : tester, enregistrer un favori -->
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{StaticResource Accent2}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- Action d'avertissement : le .reload après écriture dans world -->
+    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{StaticResource Warning}" />
+        <Setter Property="Foreground" Value="#1a1a2e" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
