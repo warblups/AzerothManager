@@ -27,3 +27,13 @@ public sealed class QualityToBrushConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>Résout le displayid d'un objet en son icône, depuis le cache local.</summary>
+public sealed class DisplayIdToIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is int displayId ? AzerothManager.Services.GameClientService.Current?.Icon(displayId) : null;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

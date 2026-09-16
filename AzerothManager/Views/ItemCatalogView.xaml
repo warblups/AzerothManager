@@ -97,6 +97,14 @@
                       VirtualizingPanel.VirtualizationMode="Recycling"
                       Sorting="OnSorting" MouseDoubleClick="OnRowDoubleClick">
                 <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="" Width="34" CanUserSort="False">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Width="24" Height="24" SnapsToDevicePixels="True"
+                                       Source="{Binding DisplayId, Converter={StaticResource DisplayIdToIcon}}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Entry" SortMemberPath="Entry"
                                         Binding="{Binding Entry}" Width="70" />
                     <DataGridTemplateColumn Header="Nom" SortMemberPath="Name" Width="2*" MinWidth="220">
@@ -140,8 +148,11 @@
                             <Button DockPanel.Dock="Right" Content="✕" Padding="7,0" Margin="6,0,0,0"
                                     Command="{Binding DataContext.CloseDetailCommand,
                                               RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <Image DockPanel.Dock="Left" Width="44" Height="44" Margin="0,0,8,0"
+                                   VerticalAlignment="Top" SnapsToDevicePixels="True"
+                                   Source="{Binding Summary.DisplayId, Converter={StaticResource DisplayIdToIcon}}" />
                             <TextBlock Text="{Binding Summary.Name}" FontSize="14" FontWeight="Bold"
-                                       TextWrapping="Wrap"
+                                       TextWrapping="Wrap" VerticalAlignment="Top"
                                        Foreground="{Binding Summary.Quality, Converter={StaticResource QualityToBrush}}" />
                         </DockPanel>
                         <TextBlock Text="{Binding Summary.NameEn}" Style="{StaticResource Caption}"

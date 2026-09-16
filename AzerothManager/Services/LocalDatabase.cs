@@ -90,6 +90,24 @@ public static class LocalDatabase
                 UpdatedAt TEXT NOT NULL
             );
 
+            -- Données importées une fois depuis les DBC du client, pour que
+            -- l'application n'en dépende plus ensuite.
+            CREATE TABLE IF NOT EXISTS DbcIcon (
+                DisplayId INTEGER PRIMARY KEY,
+                IconName  TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS DbcSpell (
+                SpellId INTEGER PRIMARY KEY,
+                Name    TEXT NOT NULL
+            );
+
+            -- Image décodée à la première utilisation, conservée en PNG.
+            CREATE TABLE IF NOT EXISTS IconImage (
+                IconName TEXT PRIMARY KEY,
+                Png      BLOB NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS TeleportPoints (
                 Id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name      TEXT NOT NULL,

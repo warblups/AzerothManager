@@ -6,9 +6,12 @@ public sealed record ItemStat(int Type, int Value)
     public string Text => (Value > 0 ? "+" : "") + Value + " " + Label;
 }
 
-public sealed record ItemSpell(int SpellId, int Trigger)
+public sealed record ItemSpell(int SpellId, int Trigger, string? Name = null)
 {
-    public string Text => $"{ItemReference.SpellTrigger(Trigger)} : sort {SpellId}";
+    /// <summary>Le nom vient de Spell.dbc, importé depuis le client ; à défaut, l'identifiant.</summary>
+    public string Text => string.IsNullOrEmpty(Name)
+        ? $"{ItemReference.SpellTrigger(Trigger)} : sort {SpellId}"
+        : $"{ItemReference.SpellTrigger(Trigger)} : {Name}";
 }
 
 /// <summary>Fiche complète d'un objet, chargée à la demande sur un seul entry.</summary>

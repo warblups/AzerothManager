@@ -15,6 +15,7 @@ public partial class ServerConfigViewModel : ObservableObject
     private readonly MySqlService _mySql;
     private readonly SshService _ssh;
     private readonly GmCommandService _gm;
+    private readonly GameClientService _client;
 
     public ObservableCollection<ServerProfile> Profiles { get; } = [];
 
@@ -26,18 +27,26 @@ public partial class ServerConfigViewModel : ObservableObject
     private ServerProfile? _selected;
 
     [ObservableProperty] private string _testOutput = "";
+
+    /// <summary>Dossier du client WoW local, source des icônes et des noms de sorts (§12).</summary>
+    [ObservableProperty] private string _clientPath = "";
+    [ObservableProperty] private string _clientStatus = "";
     [ObservableProperty] private bool _isBusy;
 
     public bool HasSelection => Selected is not null;
 
     public ServerConfigViewModel(ServerProfileService profiles, ServerContext context,
-                                 MySqlService mySql, SshService ssh, GmCommandService gm)
+                                 MySqlService mySql, SshService ssh, GmCommandService gm,
+                                 GameClientService client)
     {
         _profiles = profiles;
         _context = context;
         _mySql = mySql;
         _ssh = ssh;
         _gm = gm;
+        _client = client;
+        ClientPath = client.ClientPath;
+        ClientStatus = client.StatusText;
         Reload();
     }
 
@@ -100,6 +109,38 @@ public partial class ServerConfigViewModel : ObservableObject
         _context.Status = $"Serveur actif : {Selected.Name}";
         Log.Information("Serveur actif : {Name}", Selected.Name);
         TestOutput = $"« {Selected.Name} » est maintenant le serveur actif.";
+    }
+
+    [RelayCommand]
+    private void BrowseClient()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Dossier racine du client WoW 3.3.5a"
+        };
+        if (dialog.ShowDialog() != true) return;
+        ClientPath = dialog.FolderName;
+        _client.ClientPath = ClientPath;
+        ClientStatus = _client.StatusText;
+    }
+
+    /// <summary>Import unique des DBC. Ensuite, l'application n'a plus besoin du client.</summary>
+    [RelayCommand]
+    private async Task ImportClientAsync()
+    {
+        _client.ClientPath = ClientPath;
+        IsBusy = true;
+        ClientStatus = "Import en cours, patientez…";
+        try
+        {
+            var result = await Task.Run(_client.Import);
+            ClientStatus = result.Message + " " + _client.StatusText;
+        }
+        catch (Exception ex)
+        {
+            ClientStatus = "Échec de l'import : " + ex.Message;
+        }
+        finally { IsBusy = false; }
     }
 
     [RelayCommand]

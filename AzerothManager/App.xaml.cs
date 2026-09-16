@@ -52,6 +52,8 @@ public partial class App : Application
         var gm = new GmCommandService(context);
         var sqlEditor = new SqlEditorService(context, mySql);
         var itemCatalog = new ItemCatalogService(mySql);
+        var gameClient = new GameClientService();
+        GameClientService.Current = gameClient;
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -59,10 +61,10 @@ public partial class App : Application
             ? $"Serveur actif : {context.DisplayName}"
             : "Aucun serveur actif — commencez par créer un profil.";
 
-        var serverConfig = new ServerConfigViewModel(profiles, context, mySql, ssh, gm);
+        var serverConfig = new ServerConfigViewModel(profiles, context, mySql, ssh, gm, gameClient);
         var gmConsole = new GmConsoleViewModel(gm, context);
         var sqlConsole = new SqlEditorViewModel(sqlEditor, gm, context);
-        var catalog = new ItemCatalogViewModel(itemCatalog, context);
+        var catalog = new ItemCatalogViewModel(itemCatalog, context, gameClient);
         var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog);
 
         new MainWindow { DataContext = main }.Show();

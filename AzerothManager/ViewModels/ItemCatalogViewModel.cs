@@ -17,6 +17,7 @@ public partial class ItemCatalogViewModel : ObservableObject
 {
     private readonly ItemCatalogService _catalog;
     private readonly ServerContext _context;
+    private readonly GameClientService _client;
     private CancellationTokenSource? _pending;
 
     public ObservableCollection<ItemSummary> Items { get; } = [];
@@ -71,10 +72,11 @@ public partial class ItemCatalogViewModel : ObservableObject
     public int PageSize { get; } = 100;
     public string PageLabel => $"Page {Page + 1} / {PageCount}";
 
-    public ItemCatalogViewModel(ItemCatalogService catalog, ServerContext context)
+    public ItemCatalogViewModel(ItemCatalogService catalog, ServerContext context, GameClientService client)
     {
         _catalog = catalog;
         _context = context;
+        _client = client;
         Quality = Qualities[0];
         Class = Classes[0];
         FrenchNames = LocalDatabase.GetSetting("catalog.locale", "frFR") == "frFR";
@@ -212,7 +214,17 @@ public partial class ItemCatalogViewModel : ObservableObject
         if (Selected is null) { Detail = null; return; }
         try
         {
-            Detail = await _catalog.GetDetailAsync(Selected.Entry, FrenchNames ? "frFR" : null);
+            var detail = await _catalog.GetDetailAsync(Selected.Entry, FrenchNames ? "frFR" : null);
+
+            // Les sorts ne portent que leur identifiant en base : le nom vient du client.
+            if (detail is not null && detail.Spells.Count > 0)
+            {
+                var named = detail.Spells
+                    .Select(sp => sp with { Name = _client.SpellName(sp.SpellId) })
+                    .ToList();
+                detail = detail with { Spells = named };
+            }
+            Detail = detail;
         }
         catch (Exception ex)
         {

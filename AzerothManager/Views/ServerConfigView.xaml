@@ -46,6 +46,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
@@ -178,8 +179,26 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- Client WoW local : commun à tous les profils, donc hors du DataContext du profil -->
+        <Border Grid.Row="1" Margin="0,8,8,0" Padding="10" CornerRadius="4"
+                Background="{StaticResource Surface}" BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="Client WoW local — icônes et noms de sorts" Style="{StaticResource SectionTitle}"
+                           Margin="0,0,0,4" />
+                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                           Text="Dossier racine du client 3.3.5a, contenant dbc et Interface\Icons. Les données sont importées une fois dans la base locale : le client n'est ensuite plus nécessaire." />
+                <DockPanel Margin="0,4,0,0">
+                    <Button DockPanel.Dock="Right" Content="📥  Importer" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding ImportClientCommand}" Margin="6,0,0,6" />
+                    <Button DockPanel.Dock="Right" Content="📂" Command="{Binding BrowseClientCommand}" Margin="6,0,0,6" />
+                    <TextBox Text="{Binding ClientPath, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+                <TextBlock Text="{Binding ClientStatus}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
         <!-- Barre d'actions + retour de test, en rangée propre sous la zone défilante -->
-        <StackPanel Grid.Row="1" Background="{StaticResource Bg}" Margin="0,8,8,0">
+        <StackPanel Grid.Row="2" Background="{StaticResource Bg}" Margin="0,8,8,0">
             <Border BorderBrush="{StaticResource BorderB}" BorderThickness="0,1,0,0" Padding="0,8,0,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">

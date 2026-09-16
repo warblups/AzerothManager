@@ -12,6 +12,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <views:NotBoolConverter x:Key="NotBool" />
             <views:QualityToBrushConverter x:Key="QualityToBrush" />
+            <views:DisplayIdToIconConverter x:Key="DisplayIdToIcon" />
 
             <!-- Association ViewModel -> Vue -->
             <DataTemplate DataType="{x:Type vm:ServerConfigViewModel}">
