@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle : la coquille (navigation, thème sombre, barre d'état, bandeau Production), la **Configuration des serveurs** et la **Console GM (SOAP)** sont en place — CRUD des profils, chiffrement DPAPI, tests MySQL et SSH, sélection du serveur actif. Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Trois modules en place : **Configuration des serveurs** (CRUD des profils, DPAPI, tests MySQL/SSH/SOAP, serveur actif), **Console SQL** (multi-onglets AvalonEdit, favoris, historique, export CSV) et **Console GM** (SOAP). Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : console SQL (AvalonEdit, pas encore référencé), puis le catalogue d'objets.
+**Prochaine étape** : catalogue d'objets (`ItemCatalogService`), brique transverse réutilisée par six modules.
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -17,6 +17,9 @@ Conventions déjà établies dans le code, à suivre :
 - Le mode lecture seule est appliqué dans `MySqlService.ExecuteAsync`, pas dans l'UI.
 - `LocalDatabase.LogHistory` journalise SQL, commandes GM et actions dans la même table.
 - `ServerProfile` est un `ObservableObject` : le modèle porte la notification, assumé pour éviter une couche de DTO inutile.
+- **Les écritures SQL s'exécutent dans une transaction, puis demandent validation** en annonçant le nombre de lignes réellement touchées ; un refus provoque un ROLLBACK. C'est plus sûr qu'une confirmation à l'aveugle *avant* exécution, et c'est ce qu'un client SQL générique ne sait pas faire — ne pas régresser vers une simple `MessageBox` préalable.
+- Après une écriture validée dans `world`, `SqlEditorService.SuggestReload` propose le `.reload` correspondant, exécuté via le même `GmCommandService`. La liste des tables rechargeables est volontairement courte : n'y ajouter qu'un nom vérifié.
+- AvalonEdit n'expose pas `Text` en propriété liable : passer par `AvalonEditBehaviour.BindableText`.
 
 Le `.docx` est souvent ouvert dans Word (fichier verrouillé). Pour le relire, copier via un `FileStream` en mode `ReadWrite` share, dézipper, puis extraire le texte de `word/document.xml`.
 

@@ -19,6 +19,9 @@
             <DataTemplate DataType="{x:Type vm:GmConsoleViewModel}">
                 <views:GmConsoleView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SqlEditorViewModel}">
+                <views:SqlEditorView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
