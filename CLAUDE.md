@@ -103,6 +103,17 @@ Deux pièges qui ont dicté l'implémentation :
 - `SOAP.IP` vaut `127.0.0.1` par défaut : le port n'est pas joignable depuis l'extérieur. Et l'authentification Basic circule **en clair**. D'où le **tunnel SSH** (`ForwardedPortLocal`, port local 0) plutôt qu'exposer `SOAP.IP` sur le réseau. Le tunnel est monté par appel — simple, sans état partagé ; à mettre en cache si la latence gêne.
 - En mode lecture seule, les commandes GM sont refusées **sauf** une liste blanche d'informatives (`GmCommandService.ReadOnlyAllowed` : `server info`, `pinfo`, `lookup`, `ticket list`…), une commande GM étant par défaut une écriture.
 
+## Comptes — contrainte SRP6 (vérifié aux sources)
+
+**Ne jamais créer un compte ni changer un mot de passe par SQL.** Dans `AccountMgr::CreateAccount`, le mot de passe devient un couple SRP6 `salt` + `verifier` via `SRP6::MakeRegistrationData(username, password)` : un `INSERT` dans `auth.account` supposerait de réimplémenter SRP6 en C#. Ces deux opérations passent obligatoirement par la commande GM.
+
+- `.account create <nom> <motdepasse> [email]` et `.account set password` — tous deux `Console::Yes`, donc disponibles via SOAP.
+- `.account password` est `Console::No` : c'est le libre-service joueur, il exige une session. Ne pas le confondre avec `.account set password`.
+- Nom et mot de passe sont mis en **majuscules** avant calcul du verifier : les mots de passe sont insensibles à la casse.
+- Limites : nom 17, mot de passe 16, email 255 (`MAX_ACCOUNT_STR` / `MAX_PASS_STR` / `MAX_EMAIL_STR`). À valider dans l'interface.
+
+Le module Comptes est donc hybride : création, mot de passe, niveau GM, extension et email par commande GM ; recherche, listing, IP, bannissements et historique par SQL.
+
 ## Modules d'administration de jeu (CdC §9)
 
 Le §8 décrit des *entités*. Les modules ci-dessous correspondent au **geste quotidien d'un GM** et constituent la valeur d'usage réelle de l'application.
