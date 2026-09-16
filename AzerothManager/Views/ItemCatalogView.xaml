@@ -98,9 +98,15 @@
                       Sorting="OnSorting" MouseDoubleClick="OnRowDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTemplateColumn Header="" Width="34" CanUserSort="False">
+                        <DataGridTemplateColumn.CellStyle>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </DataGridTemplateColumn.CellStyle>
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Image Width="24" Height="24" SnapsToDevicePixels="True"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Source="{Binding DisplayId, Converter={StaticResource DisplayIdToIcon}}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
