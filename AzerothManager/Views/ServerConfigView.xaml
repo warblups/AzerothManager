@@ -41,8 +41,14 @@
             </Border>
         </DockPanel>
 
-        <!-- Détail du profil -->
-        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+        <!-- Détail du profil : deux rangées, pour que la barre d'actions ne recouvre pas les derniers champs -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
                       IsEnabled="{Binding HasSelection}">
             <StackPanel DataContext="{Binding Selected}" Margin="0,0,8,0">
 
@@ -172,8 +178,8 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Barre d'actions + retour de test, ancrée en bas de la colonne de détail -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Background="{StaticResource Bg}">
+        <!-- Barre d'actions + retour de test, en rangée propre sous la zone défilante -->
+        <StackPanel Grid.Row="1" Background="{StaticResource Bg}" Margin="0,8,8,0">
             <Border BorderBrush="{StaticResource BorderB}" BorderThickness="0,1,0,0" Padding="0,8,0,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -193,5 +199,6 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>
