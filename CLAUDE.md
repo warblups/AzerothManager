@@ -72,9 +72,12 @@ L'application gère plusieurs profils de connexion, **un seul actif à la fois**
 
 ## Interface — mode professionnel
 
-La référence visuelle est un outil de travail (Visual Studio, DBeaver, HeidiSQL), **pas** une interface de serveur privé. Thème sombre cohérent avec l'Updater, mais orienté densité et clavier.
+Densité et clavier d'abord, mais **la palette et les conventions visuelles sont celles d'AzerothUpdater**, pour que les deux applications du même auteur forment un ensemble : fond `#1a1a2e`, surfaces `#16213e` / `#0f3460`, saisie `#0d1117`, accent `#e94560`, texte `#eaeaea`, atténué `#8892b0`. Boutons plats à coins arrondis, onglets soulignés en accent.
 
-- **Densité avant décoration.** Grilles compactes, colonnes triables et redimensionnables, largeurs mémorisées. Pas d'emoji en guise d'icônes (l'Updater en utilise dans ses onglets — ne pas reprendre cette convention ici), pas d'animation décorative, pas de police fantaisie.
+Deux écarts assumés : le bandeau Production est en `#8e1d2d`, plus sombre que l'accent pour rester distinguable d'un accent déjà rouge ; et la coloration SQL utilise `Themes/SqlDark.xshd`, la définition `TSQL` d'AvalonEdit visant un fond blanc et devenant illisible ici.
+
+- **Densité avant décoration.** Grilles compactes, colonnes triables et redimensionnables, largeurs mémorisées. Pas d'animation décorative, pas de police fantaisie.
+- **Icônes emoji, comme AzerothUpdater** — convention commune aux deux applications : emoji, deux espaces, libellé (`🖥  Serveurs`). Décision de l'auteur, pour que les deux outils forment un ensemble. Dans le rail, l'emoji vit dans `NavigationItem.Icon`, pas dans `Title`.
 - **Clavier d'abord.** Chaque action fréquente a un raccourci : `F5` rafraîchir, `Ctrl+Entrée` exécuter la requête, `Ctrl+F` rechercher, `Ctrl+T` nouvel onglet SQL. Navigation complète sans souris.
 - **Contexte permanent en barre d'état** : serveur actif, base, latence, mode lecture seule. Un profil marqué *Production* doit être **visuellement distinct en continu** (bandeau ou accent coloré) : lancer une opération destructive sur le mauvais serveur est le risque principal de cet outil.
 - **Jamais de gel de l'interface.** Tout accès MySQL, SSH ou SFTP est `async`/`await`, annulable, avec progression visible. Ces opérations passent par le réseau vers un serveur potentiellement distant.
