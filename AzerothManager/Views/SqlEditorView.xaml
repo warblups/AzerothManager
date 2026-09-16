@@ -56,12 +56,12 @@
                             </StackPanel>
 
                             <!-- Éditeur -->
-                            <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                            <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1" CornerRadius="4">
                                 <avalon:TextEditor
                                     views:AvalonEditBehaviour.BindableText="{Binding SqlText, Mode=TwoWay,
                                         UpdateSourceTrigger=PropertyChanged}"
                                     FontFamily="Consolas" FontSize="13"
-                                    Background="#FF161617" Foreground="#FFD4D4D4"
+                                    Background="{StaticResource InputBg}" Foreground="{StaticResource Text}"
                                     ShowLineNumbers="True" WordWrap="True" Padding="4">
                                     <avalon:TextEditor.InputBindings>
                                         <KeyBinding Key="Return" Modifiers="Ctrl" Command="{Binding ExecuteCommand}" />
@@ -70,7 +70,7 @@
                             </Border>
 
                             <!-- Bandeau .reload : la règle d'intégration du §9 -->
-                            <Border Grid.Row="2" Background="#FF4A3A10" BorderBrush="#FFE0A030" BorderThickness="1"
+                            <Border Grid.Row="2" Background="#3d2f10" BorderBrush="{StaticResource Warning}" BorderThickness="1"
                                     Padding="8,5" Margin="0,6,0,0"
                                     Visibility="{Binding HasReloadSuggestion, Converter={StaticResource BoolToVis}}">
                                 <DockPanel>
@@ -90,15 +90,7 @@
                                       IsReadOnly="True" AutoGenerateColumns="True"
                                       EnableRowVirtualization="True" EnableColumnVirtualization="True"
                                       VirtualizingPanel.IsVirtualizing="True"
-                                      VirtualizingPanel.VirtualizationMode="Recycling"
-                                      Background="#FF161617" RowBackground="#FF1B1B1C"
-                                      AlternatingRowBackground="#FF1F1F21"
-                                      Foreground="{StaticResource Text}"
-                                      GridLinesVisibility="All"
-                                      HorizontalGridLinesBrush="{StaticResource BorderB}"
-                                      VerticalGridLinesBrush="{StaticResource BorderB}"
-                                      BorderBrush="{StaticResource BorderB}" BorderThickness="1"
-                                      FontSize="11" RowHeight="20" />
+                                      VirtualizingPanel.VirtualizationMode="Recycling" />
 
                             <TextBlock Grid.Row="4" Text="{Binding Status}" Style="{StaticResource Caption}"
                                        Margin="0,6,0,0" TextWrapping="Wrap" />

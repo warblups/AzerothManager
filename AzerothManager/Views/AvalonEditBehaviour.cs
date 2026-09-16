@@ -1,6 +1,8 @@
 using System.Windows;
+using System.Xml;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
+using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 
 namespace AzerothManager.Views;
 
@@ -40,12 +42,32 @@ public static class AvalonEditBehaviour
         if (editor.Text != text) editor.Text = text;
     }
 
+    /// <summary>
+    /// Coloration SQL pour fond sombre, chargée une fois. La définition TSQL fournie
+    /// par AvalonEdit vise un fond blanc et devient illisible ici.
+    /// </summary>
+    private static readonly Lazy<IHighlightingDefinition?> SqlDarkHighlighting = new(() =>
+    {
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Themes/SqlDark.xshd", UriKind.Absolute);
+            using var stream = Application.GetResourceStream(uri)!.Stream;
+            using var reader = new XmlTextReader(stream);
+            return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+        }
+        catch
+        {
+            // Plutôt aucune coloration qu'une coloration illisible.
+            return null;
+        }
+    });
+
     private static void Hook(TextEditor editor)
     {
         if ((bool)editor.GetValue(IsHookedProperty)) return;
         editor.SetValue(IsHookedProperty, true);
 
-        editor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("TSQL");
+        editor.SyntaxHighlighting = SqlDarkHighlighting.Value;
         editor.TextChanged += (s, _) =>
         {
             if (s is TextEditor te) SetBindableText(te, te.Text);

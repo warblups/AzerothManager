@@ -25,7 +25,7 @@
         </ItemsControl>
 
         <!-- Sortie -->
-        <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1" Background="#FF161617">
+        <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1" Background="{StaticResource InputBg}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Output}" Margin="8">
                     <ItemsControl.ItemTemplate>
