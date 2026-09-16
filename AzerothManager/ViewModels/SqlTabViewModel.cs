@@ -38,7 +38,14 @@ public partial class SqlTabViewModel : ObservableObject
     [RelayCommand]
     private async Task ExecuteAsync()
     {
-        if (IsBusy || string.IsNullOrWhiteSpace(SqlText)) return;
+        if (IsBusy) return;
+
+        // Ne jamais échouer en silence : l'absence de retour a masqué un défaut de liaison.
+        if (string.IsNullOrWhiteSpace(SqlText))
+        {
+            Status = "Requête vide.";
+            return;
+        }
         if (!_context.HasActive)
         {
             Status = "Aucun serveur actif.";
