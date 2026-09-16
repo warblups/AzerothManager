@@ -99,7 +99,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Entry" SortMemberPath="Entry"
                                         Binding="{Binding Entry}" Width="70" />
-                    <DataGridTemplateColumn Header="Nom" SortMemberPath="Name" Width="*">
+                    <DataGridTemplateColumn Header="Nom" SortMemberPath="Name" Width="2*" MinWidth="220">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Name}" FontFamily="Segoe UI"
@@ -108,7 +108,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Nom d'origine" SortMemberPath="NameEn"
-                                        Binding="{Binding NameEn}" Width="180" FontStyle="Italic" />
+                                        Binding="{Binding NameEn}" Width="1*" MinWidth="110"
+                                        FontStyle="Italic" />
                     <DataGridTextColumn Header="Qualité" SortMemberPath="Quality"
                                         Binding="{Binding QualityName}" Width="90" />
                     <DataGridTextColumn Header="ilvl" SortMemberPath="ItemLevel"
