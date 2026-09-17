@@ -89,6 +89,24 @@ Deux écarts assumés : le bandeau Production est en `#8e1d2d`, plus sombre que 
 
 CommunityToolkit.Mvvm · MySqlConnector · SSH.NET · Microsoft.Data.Sqlite · Serilog · AvalonEdit (éditeur SQL : coloration, auto-complétion, favoris, historique, export CSV, transactions).
 
+## Diagnostic d'échec SOAP : chercher la cause en amont
+
+« SOAP injoignable » est vrai mais inutile. Sur le serveur de référence, trois pannes successives ont toutes produit ce message, et **aucune ne venait de SOAP** :
+
+1. mot de passe MySQL divergent entre `authserver.conf` et `worldserver.conf` — le worldserver plantait en boucle ;
+2. `DataDir` non déclaré, donc `"."`, résolu vers le `cwd` que PM2 impose (`server/etc`) alors que les données sont dans `server/data` — « Failed to find map files for starting areas » ;
+3. worldserver simplement arrêté.
+
+D'où `ServerDiagnosticService` : à chaque échec de connexion d'une commande GM, il interroge le serveur par SSH et explique. Sonde (vérifiée sur le serveur réel) :
+
+- `pm2 describe worldserver | grep '│ status'` puis `'│ restarts'`, découpés sur le caractère `│` — `pm2 jlist` est un piège, un `grep` non contextualisé y rapporte les valeurs du **premier** processus, pas du worldserver.
+- `ss -tln | grep ':8085'` pour le worldserver, `':7878 '` (espace final) pour l'adresse d'écoute de SOAP.
+- `tail ~/.pm2/logs/worldserver-error.log`, en filtrant le bruit récurrent (« priority class »).
+
+Le diagnostic distingue alors : worldserver absent, SOAP non activé, SOAP sur la boucle locale sans tunnel coché, ou problème de compte. **C'est du diagnostic, pas de la gestion de processus** : la frontière du §3 tient.
+
+Le serveur de référence tourne sous **PM2** (`authserver` et `worldserver`), chemin `/home/warblups/server` avec `bin/ data/ etc/ logs/`.
+
 ## Méthode : vérifier contre le serveur avant d'écrire le code
 
 Le profil actif est dans la base locale, mot de passe chiffré DPAPI sous la session Windows de l'utilisateur. Une session lancée sous ce compte peut donc **interroger le vrai serveur en lecture seule** pour valider une requête avant de l'intégrer. Reconstruire le script au besoin : lire la ligne active de `Servers`, déchiffrer via `ProtectedData.Unprotect` avec l'entropie `AzerothManager.Secrets.v1`, charger le `MySqlConnector.dll` du dossier de build, refuser tout ce qui n'est pas `SELECT`/`SHOW`/`DESCRIBE`, et ne jamais afficher de mot de passe.

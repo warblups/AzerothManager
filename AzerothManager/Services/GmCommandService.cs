@@ -39,6 +39,7 @@ public sealed class GmCommandService
     ];
 
     private readonly ServerContext _context;
+    private readonly ServerDiagnosticService _diagnostic = new();
 
     public GmCommandService(ServerContext context) => _context = context;
 
@@ -97,8 +98,17 @@ public sealed class GmCommandService
         catch (Exception ex)
         {
             sw.Stop();
-            LocalDatabase.LogHistory(p.Id, "gm", "." + command, "ÉCHEC : " + ex.Message);
-            return new GmCommandResult(false, ex.Message, sw.ElapsedMilliseconds);
+
+            // « SOAP injoignable » est vrai mais inutile : la cause est presque toujours
+            // en amont. On va la chercher plutôt que de la laisser deviner.
+            var message = ex.Message;
+            var diagnostic = await _diagnostic.InspectAsync(p, ct);
+            if (diagnostic is not null)
+                message += "  —  " + ServerDiagnosticService.Explain(
+                    diagnostic, p, p.SoapThroughSshTunnel && p.UsesSsh);
+
+            LocalDatabase.LogHistory(p.Id, "gm", "." + command, "ÉCHEC : " + message);
+            return new GmCommandResult(false, message, sw.ElapsedMilliseconds);
         }
         finally
         {
