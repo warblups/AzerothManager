@@ -34,7 +34,7 @@
         <!-- Rail de navigation + contenu -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="228" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -53,10 +53,12 @@
                         <DataTemplate>
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Version}"
-                                           Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                           Style="{StaticResource Caption}" Margin="6,0,0,0"
+                                           VerticalAlignment="Center" />
                                 <TextBlock DockPanel.Dock="Left" Text="{Binding Icon}" FontSize="14"
                                            Width="22" Margin="0,0,4,0" />
-                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding Title}" />
                             </DockPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
