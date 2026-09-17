@@ -83,3 +83,30 @@ public sealed record ZonePopulation(
         {Alliance} Alliance · {Horde} Horde
         """;
 }
+
+/// <summary>
+/// Un continent prêt à l'affichage, avec ses bulles de population. Sert la vue générale,
+/// qui juxtapose les quatre plutôt que d'inventer une projection mondiale : chaque
+/// continent garde la sienne, déjà vérifiée.
+/// </summary>
+public sealed class ContinentPanel
+{
+    public required Continent Continent { get; init; }
+    public required object? Image { get; init; }
+    public required IReadOnlyList<ZonePopulation> Bubbles { get; init; }
+    public required IReadOnlyList<PlayerPosition> Players { get; init; }
+
+    public string Label => Continent.Label;
+    public double Width => Continent.Width;
+    public double Height => Continent.Height;
+
+    public int Alliance => Bubbles.Sum(b => b.Alliance);
+    public int Horde => Bubbles.Sum(b => b.Horde);
+    public int Total => Alliance + Horde;
+
+    public string Summary => Total == 0
+        ? "aucun joueur"
+        : $"{Total} joueur(s) — {Alliance} Alliance · {Horde} Horde";
+
+    public bool HasImage => Image is not null;
+}

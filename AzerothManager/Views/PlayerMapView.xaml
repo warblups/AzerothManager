@@ -23,11 +23,15 @@
                         Command="{Binding LoadCommand}" Margin="8,0,0,0" />
                 <CheckBox DockPanel.Dock="Right" Content="Inclure les déconnectés"
                           IsChecked="{Binding IncludeOffline}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <CheckBox DockPanel.Dock="Right" Content="Vue générale"
+                          IsChecked="{Binding Overview}" VerticalAlignment="Center" Margin="8,0,0,0"
+                          ToolTip="Les quatre continents côte à côte. Chacun garde sa propre projection : aucune carte mondiale n'est fabriquée." />
                 <CheckBox DockPanel.Dock="Right" Content="Effectifs par zone"
                           IsChecked="{Binding ShowZones}" VerticalAlignment="Center" Margin="8,0,0,0"
                           ToolTip="Décoché, chaque joueur est une pastille. Coché, chaque zone porte ses effectifs Alliance et Horde." />
                 <ComboBox Width="200" HorizontalAlignment="Left" Margin="0"
-                          ItemsSource="{Binding Continents}" SelectedItem="{Binding Continent}">
+                          ItemsSource="{Binding Continents}" SelectedItem="{Binding Continent}"
+                          IsEnabled="{Binding ShowSingle}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
                     </ComboBox.ItemTemplate>
@@ -39,7 +43,8 @@
             <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1"
                     Background="{StaticResource InputBg}" CornerRadius="4">
                 <Grid>
-                    <Viewbox Stretch="Uniform" Margin="4">
+                    <Viewbox Stretch="Uniform" Margin="4"
+                             Visibility="{Binding ShowSingle, Converter={StaticResource BoolToVis}}">
                         <Canvas Width="{Binding MapWidth}" Height="{Binding MapHeight}">
                             <Image Source="{Binding MapImage}"
                                    Width="{Binding MapWidth}" Height="{Binding MapHeight}" />
@@ -119,9 +124,93 @@
                         </Canvas>
                     </Viewbox>
 
+                    <!-- Vue générale : les quatre continents côte à côte, chacun avec sa
+                         propre projection. Aucune carte mondiale n'est fabriquée. -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding Overview, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding Panels}" Margin="4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="3" Padding="4" CornerRadius="4"
+                                            BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                                        <DockPanel>
+                                            <DockPanel DockPanel.Dock="Top" Margin="2,0,2,4">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}"
+                                                           Style="{StaticResource Caption}" />
+                                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource Accent}" />
+                                            </DockPanel>
+                                            <Viewbox Stretch="Uniform">
+                                                <Canvas Width="{Binding Width}" Height="{Binding Height}">
+                                                    <Image Source="{Binding Image}"
+                                                           Width="{Binding Width}" Height="{Binding Height}" />
+                                                    <ItemsControl ItemsSource="{Binding Bubbles}"
+                                                                  Width="{Binding Width}" Height="{Binding Height}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemContainerStyle>
+                                                            <Style TargetType="ContentPresenter">
+                                                                <Setter Property="Canvas.Left" Value="{Binding MarkerX}" />
+                                                                <Setter Property="Canvas.Top" Value="{Binding MarkerY}" />
+                                                            </Style>
+                                                        </ItemsControl.ItemContainerStyle>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Width="{Binding Size}" Height="{Binding Size}"
+                                                                        CornerRadius="999" BorderThickness="2"
+                                                                        ToolTip="{Binding Tooltip}" Opacity="0.93">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="#DD7A1420" />
+                                                                            <Setter Property="BorderBrush" Value="#FFE03030" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding AllianceMajority}" Value="True">
+                                                                                    <Setter Property="Background" Value="#DD11315E" />
+                                                                                    <Setter Property="BorderBrush" Value="#FF3080E0" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               FontWeight="Bold" FontSize="11">
+                                                                        <Run Text="{Binding Alliance, Mode=OneWay}" Foreground="#FF9BC9FF" />
+                                                                        <Run Text="·" Foreground="#FFBBBBBB" />
+                                                                        <Run Text="{Binding Horde, Mode=OneWay}" Foreground="#FFFFA0A0" />
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Canvas>
+                                            </Viewbox>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
                     <!-- Fond absent : on explique comment le produire plutôt que d'afficher du vide -->
-                    <Border Background="#CC1a1a2e" Padding="20"
-                            Visibility="{Binding MapMissing, Converter={StaticResource BoolToVis}}">
+                    <Border Background="#CC1a1a2e" Padding="20">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding MapMissing}" Value="True" />
+                                            <Condition Binding="{Binding Overview}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="560">
                             <TextBlock Text="Fond de carte absent" FontSize="15" FontWeight="Bold"
                                        Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />

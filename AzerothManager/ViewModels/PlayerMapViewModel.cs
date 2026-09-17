@@ -30,12 +30,23 @@ public partial class PlayerMapViewModel : ObservableObject
     /// <summary>Toutes les zones peuplées, tous continents confondus.</summary>
     public ObservableCollection<ZonePopulation> AllZones { get; } = [];
 
+    /// <summary>Les quatre continents juxtaposés, pour la vue générale.</summary>
+    public ObservableCollection<ContinentPanel> Panels { get; } = [];
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MapImage))]
     [NotifyPropertyChangedFor(nameof(MapMissing))]
     private Continent? _continent;
 
     [ObservableProperty] private bool _includeOffline;
+
+    /// <summary>
+    /// Vue générale : les quatre continents côte à côte. Chacun conserve sa propre
+    /// projection plutôt que d'en inventer une mondiale, faute de pouvoir la vérifier.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSingle))]
+    private bool _overview;
 
     /// <summary>Bascule entre les joueurs un par un et les effectifs par zone.</summary>
     [ObservableProperty]
@@ -51,6 +62,7 @@ public partial class PlayerMapViewModel : ObservableObject
     [ObservableProperty] private string _status = "Chargez la position des joueurs.";
 
     public bool ShowPlayers => !ShowZones;
+    public bool ShowSingle => !Overview;
 
     public System.Windows.GridLength PanelWidth =>
         PanelCollapsed ? new System.Windows.GridLength(0) : new System.Windows.GridLength(300);
@@ -68,15 +80,7 @@ public partial class PlayerMapViewModel : ObservableObject
     {
         get
         {
-            if (Continent is null || !PlayerMapService.HasMap(Continent)) return null;
-
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(PlayerMapService.MapFile(Continent));
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            return Continent is null ? null : LoadMap(Continent);
         }
     }
 
@@ -128,14 +132,46 @@ public partial class PlayerMapViewModel : ObservableObject
     {
         Markers.Clear();
         ZoneBubbles.Clear();
-        if (Continent is null) return;
 
-        foreach (var p in _placed.Where(p => p.MapId == Continent.MapId)) Markers.Add(p);
+        if (Continent is not null)
+        {
+            foreach (var p in _placed.Where(p => p.MapId == Continent.MapId)) Markers.Add(p);
 
-        // Une zone sans rectangle n'est pas projetable : elle reste dans le tableau,
-        // mais on ne l'invente pas sur la carte.
-        foreach (var z in _zones.Where(z => z.MapId == Continent.MapId && z.Total > 0 && z.X > 0))
-            ZoneBubbles.Add(z);
+            // Une zone sans rectangle n'est pas projetable : elle reste dans le tableau,
+            // mais on ne l'invente pas sur la carte.
+            foreach (var z in _zones.Where(z => z.MapId == Continent.MapId && z.Total > 0 && z.X > 0))
+                ZoneBubbles.Add(z);
+        }
+
+        RefreshPanels();
+    }
+
+    private void RefreshPanels()
+    {
+        Panels.Clear();
+        foreach (var continent in Continent.All)
+        {
+            Panels.Add(new ContinentPanel
+            {
+                Continent = continent,
+                Image = LoadMap(continent),
+                Bubbles = [.. _zones.Where(z => z.MapId == continent.MapId && z.Total > 0 && z.X > 0)],
+                Players = [.. _placed.Where(p => p.MapId == continent.MapId)]
+            });
+        }
+    }
+
+    private static BitmapImage? LoadMap(Continent continent)
+    {
+        if (!PlayerMapService.HasMap(continent)) return null;
+
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.UriSource = new Uri(PlayerMapService.MapFile(continent));
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 
     partial void OnContinentChanged(Continent? value) => RefreshMarkers();
@@ -143,6 +179,8 @@ public partial class PlayerMapViewModel : ObservableObject
     partial void OnIncludeOfflineChanged(bool value) => _ = LoadAsync();
 
     partial void OnShowZonesChanged(bool value) => RefreshMarkers();
+
+    partial void OnOverviewChanged(bool value) => RefreshPanels();
 
     [RelayCommand]
     private void TogglePanel() => PanelCollapsed = !PanelCollapsed;
