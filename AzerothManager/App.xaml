@@ -45,6 +45,9 @@
             <DataTemplate DataType="{x:Type vm:PlayerMapViewModel}">
                 <views:PlayerMapView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:CharactersViewModel}">
+                <views:CharactersView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -30,7 +30,8 @@ public partial class MainViewModel : ObservableObject
                          MailViewModel mail,
                          ArmoryViewModel armory,
                          TicketsViewModel tickets, RestoreViewModel restore,
-                         PlayerMapViewModel playerMap)
+                         PlayerMapViewModel playerMap,
+                         CharactersViewModel characters)
     {
         Context = context;
 
@@ -68,6 +69,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.0",
             IsAvailable = true,
             Content = mail
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "🧙",
+            Title = "Personnages",
+            Version = "v1.0",
+            IsAvailable = true,
+            Content = characters
         });
 
         Items.Add(new NavigationItem
@@ -128,7 +138,6 @@ public partial class MainViewModel : ObservableObject
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
-            ("🧙", "Personnages", "v1.0"),
             ("🛡", "Modération", "v1.0"),
             ("🌀", "Téléportation", "v1.1"),
             ("🗺", "Édition du monde", "v1.2"),

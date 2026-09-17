@@ -1,0 +1,224 @@
+<UserControl x:Class="AzerothManager.Views.CharactersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="360" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Nom du personnage ou du compte" Style="{StaticResource Caption}" />
+                    <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Niv. min" Style="{StaticResource Caption}" />
+                    <TextBox Text="{Binding MinLevel, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="Niv. max" Style="{StaticResource Caption}" />
+                    <TextBox Text="{Binding MaxLevel, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <CheckBox Content="En ligne" IsChecked="{Binding OnlyOnline}"
+                              VerticalAlignment="Center" Margin="0,0,10,6" />
+                    <Button Content="🔍  Rechercher" Style="{StaticResource SuccessButton}"
+                            Command="{Binding SearchCommand}" Margin="0,0,0,6" />
+                </StackPanel>
+            </Grid>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Characters}" SelectedItem="{Binding Selected}"
+                      IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                      EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" MinWidth="110" />
+                    <DataGridTextColumn Header="Niv" Binding="{Binding Level}" Width="42" />
+                    <DataGridTextColumn Header="Race" Binding="{Binding RaceName}" Width="105" />
+                    <DataGridTextColumn Header="Classe" Binding="{Binding ClassName}" Width="120" />
+                    <DataGridTextColumn Header="Faction" Binding="{Binding FactionName}" Width="70" />
+                    <DataGridTextColumn Header="Or" Binding="{Binding MoneyText}" Width="95" />
+                    <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="130" />
+                    <DataGridTextColumn Header="Compte" Binding="{Binding AccountName}" Width="90" />
+                    <DataGridTextColumn Header="État" Binding="{Binding StateText}" Width="70" />
+                    <DataGridTextColumn Header="En attente" Binding="{Binding AtLoginText}" Width="140" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <DockPanel Grid.Row="2" Margin="0,8,0,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="◀" Command="{Binding PreviousPageCommand}" />
+                    <TextBlock Text="{Binding PageLabel}" Margin="4,0,10,0" />
+                    <Button Content="▶" Command="{Binding NextPageCommand}" Margin="0" />
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+            </DockPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                      IsEnabled="{Binding HasSelection}">
+            <StackPanel>
+                <Border Padding="10" CornerRadius="4" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Selected.Name, FallbackValue='Aucun personnage'}"
+                                   FontSize="14" FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0">
+                            <Run Text="Niveau " /><Run Text="{Binding Selected.Level, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding Selected.RaceName, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding Selected.ClassName, Mode=OneWay}" />
+                            <Run Text="  ·  compte " /><Run Text="{Binding Selected.AccountName, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="{Binding Selected.ZoneName, Mode=OneWay}" />
+                            <Run Text="  ·  temps de jeu " /><Run Text="{Binding Selected.PlayedText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="Dernière déconnexion : " /><Run Text="{Binding Selected.LogoutText, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Niveau -->
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Niveau" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Appliquer" Margin="6,0,0,0"
+                                    Command="{Binding ApplyLevelCommand}" />
+                            <TextBox Text="{Binding NewLevel, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="De 1 à 80" Margin="0" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Drapeaux at_login -->
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Services de personnage" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="Ces actions posent un drapeau sur le personnage : il prend effet à sa prochaine connexion, pas immédiatement." />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
+                            <Run Text="En attente : " /><Run Text="{Binding Selected.AtLoginText, Mode=OneWay}" />
+                        </TextBlock>
+                        <WrapPanel Margin="0,6,0,0">
+                            <Button Content="Renommage" Command="{Binding FlagCommand}" CommandParameter="rename"
+                                    Margin="0,0,6,6" />
+                            <Button Content="Customisation" Command="{Binding FlagCommand}" CommandParameter="customize"
+                                    Margin="0,0,6,6" />
+                            <Button Content="Faction" Command="{Binding FlagCommand}" CommandParameter="faction"
+                                    Margin="0,0,6,6" />
+                            <Button Content="Race" Command="{Binding FlagCommand}" CommandParameter="race"
+                                    Margin="0,0,6,6" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Téléportation -->
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Téléportation" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="🔍" Margin="6,0,0,6"
+                                    Command="{Binding LoadDestinationsCommand}" />
+                            <TextBox Text="{Binding DestinationSearch, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Filtrer les destinations, puis cliquer sur la loupe">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return" Command="{Binding LoadDestinationsCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                        </DockPanel>
+                        <ComboBox ItemsSource="{Binding Destinations}" SelectedItem="{Binding Destination}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="🌀  Téléporter" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding TeleportCommand}" />
+                            <Button Content="Point de liaison" Command="{Binding SendHomeCommand}" Margin="0" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Text="Le rappel ramène le personnage là où il était avant la dernière téléportation : c'est le filet de sécurité en cas d'erreur." />
+                        <Button Content="↩  Rappeler à la position précédente" Command="{Binding RecallCommand}"
+                                HorizontalAlignment="Left" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Actions immédiates -->
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Sur un joueur connecté" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                        <WrapPanel>
+                            <Button Content="Invoquer" Command="{Binding SummonCommand}" Margin="0,0,6,6" />
+                            <Button Content="Rejoindre" Command="{Binding AppearCommand}" Margin="0,0,6,6" />
+                            <Button Content="Réanimer" Command="{Binding ReviveCommand}" Margin="0,0,6,6" />
+                            <Button Content="👢  Expulser" Style="{StaticResource DangerButton}"
+                                    Command="{Binding KickCommand}" Margin="0,0,6,6" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Or -->
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Or" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                        <TextBlock Text="{Binding MoneyHint}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                        <Grid Margin="0,4,0,0" IsEnabled="{Binding MoneyEditable}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Or" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Gold, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Argent" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Silver, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Cuivre" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Copper, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Grid>
+                        <Button Content="💰  Fixer l'or" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ApplyMoneyCommand}" IsEnabled="{Binding MoneyEditable}"
+                                HorizontalAlignment="Left" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
