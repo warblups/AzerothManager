@@ -27,7 +27,8 @@ public partial class MainViewModel : ObservableObject
                          GmConsoleViewModel gmConsole, SqlEditorViewModel sqlConsole,
                          ItemCatalogViewModel itemCatalog,
                          AccountsViewModel accounts,
-                         MailViewModel mail)
+                         MailViewModel mail,
+                         ArmoryViewModel armory)
     {
         Context = context;
 
@@ -85,6 +86,15 @@ public partial class MainViewModel : ObservableObject
             Content = gmConsole
         });
 
+        Items.Add(new NavigationItem
+        {
+            Icon = "⚔",
+            Title = "Armurerie",
+            Version = "v1.1",
+            IsAvailable = true,
+            Content = armory
+        });
+
         // Modules planifiés : affichés dès maintenant pour que l'ordre de construction
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
@@ -93,7 +103,6 @@ public partial class MainViewModel : ObservableObject
             ("🛡", "Modération", "v1.0"),
             ("🎫", "Tickets GM", "v1.1"),
             ("🌀", "Téléportation", "v1.1"),
-            ("⚔", "Armurerie", "v1.1"),
             ("🗺", "Édition du monde", "v1.2"),
             ("📜", "Logs", "v1.2")
         })

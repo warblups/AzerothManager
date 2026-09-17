@@ -1,0 +1,179 @@
+<UserControl x:Class="AzerothManager.Views.ArmoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Recherche de personnage -->
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Content="🔍" Style="{StaticResource SuccessButton}"
+                        Command="{Binding SearchCommand}" VerticalAlignment="Bottom" Margin="6,0,0,0" />
+                <CheckBox DockPanel.Dock="Right" Content="En ligne" IsChecked="{Binding OnlyOnline}"
+                          VerticalAlignment="Bottom" Margin="6,0,0,6" />
+                <StackPanel>
+                    <TextBlock Text="Nom du personnage" Style="{StaticResource Caption}" />
+                    <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </StackPanel>
+            </DockPanel>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Characters}" SelectedItem="{Binding Selected}"
+                      IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                      EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" MinWidth="90" />
+                    <DataGridTextColumn Header="Niv" Binding="{Binding Level}" Width="40" />
+                    <DataGridTextColumn Header="Classe" Binding="{Binding ClassName}" Width="100" />
+                    <DataGridTextColumn Header="Compte" Binding="{Binding AccountName}" Width="85" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Grid.Row="2" Text="{Binding Status}" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+        </Grid>
+
+        <!-- Fiche -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+            <StackPanel DataContext="{Binding Sheet}">
+
+                <!-- Identité -->
+                <Border Padding="12" CornerRadius="4" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Caption}">
+                                <Run Text="Niveau d'objet moyen " />
+                                <Run Text="{Binding AverageItemLevel, Mode=OneWay}" FontWeight="Bold"
+                                     Foreground="{StaticResource Accent}" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="Bold"
+                                       Foreground="{StaticResource Accent}" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0">
+                            <Run Text="Niveau " /><Run Text="{Binding Level, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding RaceName, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding ClassName, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding FactionName, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding GenderName, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="Compte " /><Run Text="{Binding AccountName, Mode=OneWay}" />
+                            <Run Text="  ·  " /><Run Text="{Binding GuildText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="Position : " /><Run Text="{Binding LocationText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="Or " /><Run Text="{Binding MoneyText, Mode=OneWay}" />
+                            <Run Text="  ·  temps de jeu " /><Run Text="{Binding PlayedText, Mode=OneWay}" />
+                            <Run Text="  ·  hauts faits " /><Run Text="{Binding AchievementCount, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="Honneur " /><Run Text="{Binding HonorPoints, Mode=OneWay}" />
+                            <Run Text="  ·  points d'arène " /><Run Text="{Binding ArenaPoints, Mode=OneWay}" />
+                            <Run Text="  ·  victimes " /><Run Text="{Binding TotalKills, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="270" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Équipement -->
+                    <Border Grid.Column="0" Padding="10" CornerRadius="4" Background="{StaticResource Surface}"
+                            BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Équipement" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+                            <ItemsControl ItemsSource="{Binding Equipment}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,6,4" Padding="4" CornerRadius="3"
+                                                Background="#FF131c2b">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Left" Width="30" Height="30"
+                                                        Margin="0,0,7,0" BorderThickness="1"
+                                                        BorderBrush="{StaticResource BorderB}">
+                                                    <Image Source="{Binding DisplayId, Converter={StaticResource DisplayIdToIcon}}"
+                                                           SnapsToDevicePixels="True" />
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding SlotName}" Style="{StaticResource Caption}"
+                                                               Margin="0" />
+                                                    <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis"
+                                                               Foreground="{Binding Quality, Converter={StaticResource QualityToBrush}}" />
+                                                    <TextBlock Text="{Binding LevelText}" Style="{StaticResource Caption}"
+                                                               Margin="0" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Statistiques -->
+                    <Border Grid.Column="2" Padding="10" CornerRadius="4" Background="{StaticResource Surface}"
+                            BorderBrush="{StaticResource BorderB}" BorderThickness="1" VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Text="Statistiques" Style="{StaticResource SectionTitle}" Margin="0,0,0,6" />
+
+                            <TextBlock Text="{Binding DataContext.StatsWarning, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                       Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Foreground="{StaticResource Warning}" Margin="0,0,0,6" />
+
+                            <StackPanel DataContext="{Binding Stats}"
+                                        Visibility="{Binding DataContext.HasStats,
+                                                     RelativeSource={RelativeSource AncestorType=UserControl},
+                                                     Converter={StaticResource BoolToVis}}">
+                                <TextBlock><Run Text="Vie " /><Run Text="{Binding MaxHealth, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Mana " /><Run Text="{Binding MaxMana, Mode=OneWay}" /></TextBlock>
+                                <TextBlock Text="" Margin="0,4,0,0" />
+                                <TextBlock><Run Text="Force " /><Run Text="{Binding Strength, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Agilité " /><Run Text="{Binding Agility, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Endurance " /><Run Text="{Binding Stamina, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Intelligence " /><Run Text="{Binding Intellect, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Esprit " /><Run Text="{Binding Spirit, Mode=OneWay}" /></TextBlock>
+                                <TextBlock Text="" Margin="0,4,0,0" />
+                                <TextBlock><Run Text="Armure " /><Run Text="{Binding Armor, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Puissance d'attaque " /><Run Text="{Binding AttackPower, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Puissance des sorts " /><Run Text="{Binding SpellPower, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Résilience " /><Run Text="{Binding Resilience, Mode=OneWay}" /></TextBlock>
+                                <TextBlock Text="" Margin="0,4,0,0" />
+                                <TextBlock><Run Text="Critique " /><Run Text="{Binding CritPct, StringFormat={}{0:0.00} %, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Esquive " /><Run Text="{Binding DodgePct, StringFormat={}{0:0.00} %, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Parade " /><Run Text="{Binding ParryPct, StringFormat={}{0:0.00} %, Mode=OneWay}" /></TextBlock>
+                                <TextBlock><Run Text="Blocage " /><Run Text="{Binding BlockPct, StringFormat={}{0:0.00} %, Mode=OneWay}" /></TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

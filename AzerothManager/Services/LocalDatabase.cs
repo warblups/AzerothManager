@@ -102,6 +102,16 @@ public static class LocalDatabase
                 Name    TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS DbcMap (
+                MapId INTEGER PRIMARY KEY,
+                Name  TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS DbcArea (
+                AreaId INTEGER PRIMARY KEY,
+                Name   TEXT NOT NULL
+            );
+
             -- Image décodée à la première utilisation, conservée en PNG.
             CREATE TABLE IF NOT EXISTS IconImage (
                 IconName TEXT PRIMARY KEY,

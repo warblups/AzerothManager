@@ -56,6 +56,7 @@ public partial class App : Application
         var mailService = new MailService(gm, mySql);
         var gameClient = new GameClientService();
         GameClientService.Current = gameClient;
+        var armoryService = new ArmoryService(mySql, context, gameClient);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -73,7 +74,8 @@ public partial class App : Application
         // recherche du module ne soit pas écrasée par celle d'une boîte de dialogue.
         var mail = new MailViewModel(mailService, context,
             () => new ItemCatalogViewModel(itemCatalog, context, gameClient));
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail);
+        var armory = new ArmoryViewModel(armoryService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory);
 
         new MainWindow { DataContext = main }.Show();
     }

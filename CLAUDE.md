@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets** (icônes et noms de sorts issus des DBC), **Comptes** et **Courrier en jeu**. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu** et **Armurerie**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : Armurerie (la brique DBC est déjà là).
+**Prochaine étape** : modules v1.1 restants (tickets GM, restauration ciblée, téléportation, métiers) ou v1.2 (édition du monde).
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -115,8 +115,17 @@ Vérifié sur les fichiers réels, pas de mémoire :
 - **Noms de sorts** : seize créneaux de langue à partir du **champ 136** de `Spell.dbc`. Un client localisé ne remplit **que le sien** — sur un client français, le créneau anglais est vide pour les 49 839 sorts. Ne jamais coder un créneau en dur : `DbcReader.GetFirstNonEmptyString` balaie la plage.
 - **Les icônes sont des TGA**, pas des BLP : 128×128, non compressés, 32 bits BGRA, origine en bas à gauche. WPF ne lit pas le TGA ; `GameClientService.LoadTga` couvre ce seul cas.
 - **`spell_dbc` en base ne sert à rien** pour les noms : 4 518 sorts personnalisés seulement, aucun nom localisé.
+- **`Map.dbc`** : nom localisé à partir du champ **5**. **`AreaTable.dbc`** : à partir du champ **11**. Même règle que les sorts — balayer la plage, ne pas figer un créneau.
 
 Le client n'est requis qu'à l'import : tout part dans SQLite (`DbcIcon`, `DbcSpell`, `IconImage`), et l'application est ensuite autonome. Chemin du client dans `Settings` sous `client.path`.
+
+## Armurerie — pièges du schéma (vérifié sur serveur réel)
+
+- **`character_stats` n'est écrite qu'à la déconnexion** du personnage. Elle peut être absente — c'était le cas du seul personnage du serveur de test — ou périmée pour un joueur connecté. L'interface le dit au lieu d'afficher des zéros trompeurs.
+- `character_inventory` ne stocke que le **guid** de l'objet : il faut joindre `item_instance` pour obtenir l'`itemEntry`, puis `item_template`.
+- Équipement porté = `bag = 0` et `slot < 19` (énumération `EquipmentSlots`). Les emplacements vides sont conservés dans la fiche : elle doit montrer ce qui manque.
+- Guilde : `guild_member` → `guild` (nom) et `guild_rank` (`guildid` + `rid` = `gm.rank` → `rname`).
+- Les jointures inter-bases sont qualifiées avec les noms de base du profil, le serveur MySQL étant commun.
 
 ## Courrier — commandes et limites (vérifié aux sources)
 

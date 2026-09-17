@@ -6,7 +6,7 @@ using Serilog;
 
 namespace AzerothManager.Services;
 
-public sealed record ImportResult(int Icons, int Spells, string Message);
+public sealed record ImportResult(int Icons, int Spells, int Maps, int Areas, string Message);
 
 /// <summary>
 /// Icônes d'objets et noms de sorts, issus des DBC du client 3.3.5a.
@@ -30,8 +30,14 @@ public sealed class GameClientService
     /// <summary>Premier des seize créneaux de langue du nom de sort.</summary>
     private const int SpellNameFirstField = 136;
 
+    /// <summary>Premiers créneaux de langue, vérifiés sur les fichiers réels.</summary>
+    private const int MapNameFirstField = 5;
+    private const int AreaNameFirstField = 11;
+
     private Dictionary<int, string>? _icons;
     private Dictionary<int, string>? _spells;
+    private Dictionary<int, string>? _maps;
+    private Dictionary<int, string>? _areas;
     private readonly Dictionary<int, ImageSource?> _imageCache = [];
 
     /// <summary>
@@ -63,10 +69,12 @@ public sealed class GameClientService
     public ImportResult Import()
     {
         if (!ClientHasDbc)
-            return new ImportResult(0, 0, "ItemDisplayInfo.dbc introuvable dans le dossier indiqué.");
+            return new ImportResult(0, 0, 0, 0, "ItemDisplayInfo.dbc introuvable dans le dossier indiqué.");
 
         var icons = 0;
         var spells = 0;
+        var maps = 0;
+        var areas = 0;
 
         using var cnx = LocalDatabase.Open();
         using var tx = cnx.BeginTransaction();
@@ -113,14 +121,56 @@ public sealed class GameClientService
             }
         }
 
+        maps = ImportNames(cnx, tx, "Map.dbc", MapNameFirstField, "DbcMap", "MapId");
+        areas = ImportNames(cnx, tx, "AreaTable.dbc", AreaNameFirstField, "DbcArea", "AreaId");
+
         tx.Commit();
 
         _icons = null;
         _spells = null;
+        _maps = null;
+        _areas = null;
         _imageCache.Clear();
 
-        Log.Information("Import DBC : {Icons} icônes, {Spells} sorts", icons, spells);
-        return new ImportResult(icons, spells, $"{icons} icônes et {spells} sorts importés.");
+        Log.Information("Import DBC : {Icons} icônes, {Spells} sorts, {Maps} cartes, {Areas} zones",
+            icons, spells, maps, areas);
+        return new ImportResult(icons, spells, maps, areas,
+            $"{icons} icônes, {spells} sorts, {maps} cartes et {areas} zones importés.");
+    }
+
+    /// <summary>Import générique d'un DBC identifiant -> nom localisé.</summary>
+    private int ImportNames(SqliteConnection cnx, SqliteTransaction tx, string file,
+                            int firstNameField, string table, string keyColumn)
+    {
+        var path = Path.Combine(DbcPath, file);
+        if (!File.Exists(path)) return 0;
+
+        var count = 0;
+        try
+        {
+            using var cmd = cnx.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = $"INSERT INTO {table} ({keyColumn}, Name) VALUES ($k, $n) " +
+                              $"ON CONFLICT({keyColumn}) DO UPDATE SET Name = $n";
+            var pk = cmd.Parameters.Add("$k", SqliteType.Integer);
+            var pn = cmd.Parameters.Add("$n", SqliteType.Text);
+
+            var dbc = new DbcReader(path);
+            for (var row = 0; row < dbc.RecordCount; row++)
+            {
+                var name = dbc.GetFirstNonEmptyString(row, firstNameField);
+                if (name.Length == 0) continue;
+                pk.Value = dbc.GetInt(row, 0);
+                pn.Value = name;
+                cmd.ExecuteNonQuery();
+                count++;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Lecture de {File} impossible", file);
+        }
+        return count;
     }
 
     // ------------------------------------------------------------------ lecture
@@ -176,6 +226,23 @@ public sealed class GameClientService
         while (rd.Read()) _spells[rd.GetInt32(0)] = rd.GetString(1);
         return _spells;
     }
+
+    private Dictionary<int, string> Names(string table, string keyColumn)
+    {
+        var map = new Dictionary<int, string>();
+        using var cnx = LocalDatabase.Open();
+        using var cmd = cnx.CreateCommand();
+        cmd.CommandText = $"SELECT {keyColumn}, Name FROM {table}";
+        using var rd = cmd.ExecuteReader();
+        while (rd.Read()) map[rd.GetInt32(0)] = rd.GetString(1);
+        return map;
+    }
+
+    public string MapName(int mapId) =>
+        (_maps ??= Names("DbcMap", "MapId")).GetValueOrDefault(mapId, $"carte {mapId}");
+
+    public string AreaName(int areaId) =>
+        (_areas ??= Names("DbcArea", "AreaId")).GetValueOrDefault(areaId, areaId == 0 ? "—" : $"zone {areaId}");
 
     public string? IconName(int displayId) => Icons().GetValueOrDefault(displayId);
 
