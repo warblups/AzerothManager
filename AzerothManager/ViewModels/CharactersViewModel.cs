@@ -14,7 +14,7 @@ public partial class CharactersViewModel : ObservableObject
     private CancellationTokenSource? _pending;
 
     public ObservableCollection<CharacterRow> Characters { get; } = [];
-    public ObservableCollection<TeleportDestination> Destinations { get; } = [];
+    public ObservableCollection<TeleportPoint> Destinations { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
@@ -40,7 +40,7 @@ public partial class CharactersViewModel : ObservableObject
     // Saisies des actions
     [ObservableProperty] private string _newLevel = "";
     [ObservableProperty] private string _destinationSearch = "";
-    [ObservableProperty] private TeleportDestination? _destination;
+    [ObservableProperty] private TeleportPoint? _destination;
     [ObservableProperty] private string _gold = "";
     [ObservableProperty] private string _silver = "";
     [ObservableProperty] private string _copper = "";

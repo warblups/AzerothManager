@@ -51,6 +51,9 @@
             <DataTemplate DataType="{x:Type vm:ModerationViewModel}">
                 <views:ModerationView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:TeleportViewModel}">
+                <views:TeleportView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

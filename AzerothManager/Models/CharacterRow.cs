@@ -1,11 +1,5 @@
 namespace AzerothManager.Models;
 
-/// <summary>Destination de téléportation, lue dans world.game_tele.</summary>
-public sealed record TeleportDestination(int Id, string Name, int MapId, float X, float Y, float Z)
-{
-    public override string ToString() => Name;
-}
-
 /// <summary>
 /// Personnage, tel que listé par le module du même nom. Distinct de CharacterSheet,
 /// qui sert l'armurerie : ici on veut de quoi chercher et agir, pas une fiche complète.
@@ -69,4 +63,24 @@ public sealed record CharacterRow(
     }
 
     public bool HasPendingFlags => AtLogin != 0;
+}
+
+/// <summary>Carte présente dans la bibliothèque de téléportation, avec son nombre de points.</summary>
+public sealed record NamedMap(int MapId, string Name, int Count)
+{
+    public string Label => $"{Name} ({Count})";
+}
+
+/// <summary>
+/// Point de la bibliothèque world.game_tele.
+///
+/// Le nom est l'identifiant utilisé par « .tele name » : il ne doit pas contenir d'espace,
+/// la commande le lisant comme un seul mot.
+/// </summary>
+public sealed record TeleportPoint(
+    int Id, string Name, int MapId, string MapName,
+    float X, float Y, float Z, float Orientation)
+{
+    public string PositionText => $"{X:0}, {Y:0}, {Z:0}";
+    public string OrientationText => $"{Orientation:0.00}";
 }

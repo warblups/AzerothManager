@@ -32,7 +32,8 @@ public partial class MainViewModel : ObservableObject
                          TicketsViewModel tickets, RestoreViewModel restore,
                          PlayerMapViewModel playerMap,
                          CharactersViewModel characters,
-                         ModerationViewModel moderation)
+                         ModerationViewModel moderation,
+                         TeleportViewModel teleport)
     {
         Context = context;
 
@@ -144,11 +145,19 @@ public partial class MainViewModel : ObservableObject
             Content = moderation
         });
 
+        Items.Add(new NavigationItem
+        {
+            Icon = "🌀",
+            Title = "Téléportation",
+            Version = "v1.1",
+            IsAvailable = true,
+            Content = teleport
+        });
+
         // Modules planifiés : affichés dès maintenant pour que l'ordre de construction
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
-            ("🌀", "Téléportation", "v1.1"),
             ("🗺", "Édition du monde", "v1.2"),
             ("📜", "Logs", "v1.2")
         })

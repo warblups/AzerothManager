@@ -130,10 +130,10 @@ public sealed class CharacterService
     }
 
     /// <summary>Destinations de téléportation du serveur (1 989 sur le serveur de référence).</summary>
-    public async Task<IReadOnlyList<TeleportDestination>> DestinationsAsync(
+    public async Task<IReadOnlyList<TeleportPoint>> DestinationsAsync(
         string? search = null, CancellationToken ct = default)
     {
-        var list = new List<TeleportDestination>();
+        var list = new List<TeleportPoint>();
         await using var cnx = await _mySql.OpenAsync(MySqlService.Db.World, ct);
         await using var cmd = cnx.CreateCommand();
         cmd.CommandText = string.IsNullOrWhiteSpace(search)
@@ -146,8 +146,9 @@ public sealed class CharacterService
         await using var rd = await cmd.ExecuteReaderAsync(ct);
         while (await rd.ReadAsync(ct))
         {
-            list.Add(new TeleportDestination(rd.GetInt32(0), rd.GetString(1), rd.GetInt32(2),
-                rd.GetFloat(3), rd.GetFloat(4), rd.GetFloat(5)));
+            var mapId = rd.GetInt32(2);
+            list.Add(new TeleportPoint(rd.GetInt32(0), rd.GetString(1), mapId, _client.MapName(mapId),
+                rd.GetFloat(3), rd.GetFloat(4), rd.GetFloat(5), 0));
         }
         return list;
     }
