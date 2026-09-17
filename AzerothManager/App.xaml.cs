@@ -60,6 +60,7 @@ public partial class App : Application
         var supportService = new SupportService(mySql, gm, context, gameClient);
         var playerMapService = new PlayerMapService(mySql, gameClient);
         var characterService = new CharacterService(mySql, gm, context, gameClient);
+        var moderationService = new ModerationService(mySql, gm, context);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -82,7 +83,8 @@ public partial class App : Application
         var restore = new RestoreViewModel(supportService, context);
         var playerMap = new PlayerMapViewModel(playerMapService, context);
         var charactersVm = new CharactersViewModel(characterService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm);
+        var moderation = new ModerationViewModel(moderationService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation);
 
         new MainWindow { DataContext = main }.Show();
     }

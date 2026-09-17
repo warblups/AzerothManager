@@ -32,7 +32,7 @@ public sealed record CharacterRow(
     public string ClassName => GameReference.ClassName(Class);
     public string FactionName => GameReference.FactionName(Race);
     public string GenderName => Gender == 0 ? "M" : "F";
-    public string MoneyText => ItemReference.Money(Money);
+    public string MoneyText => ItemReference.Money(Money, dashWhenZero: false);
     public string StateText => Online ? "En ligne" : "—";
     public string LogoutText => LogoutTime?.ToString("dd/MM/yyyy HH:mm") ?? "jamais";
 

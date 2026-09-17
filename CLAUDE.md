@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs** et **Personnages**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages** et **Modération**. **Le socle v1.0 est complet.** Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : Modération pour clore la v1.0, puis métiers et modification en direct (v1.1), enfin l'édition du monde (v1.2). Une carte des joueurs connectés est envisagée — voir la note plus bas.
+**Prochaine étape** : v1.1 — téléportation dédiée, métiers et sorts, modification en direct. Puis v1.2, l'édition du monde. Une carte des joueurs connectés est envisagée — voir la note plus bas.
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -177,6 +177,21 @@ Piège principal : **l'art d'interface et les DBC ne sont pas dans `common.MPQ`*
 - Équipement porté = `bag = 0` et `slot < 19` (énumération `EquipmentSlots`). Les emplacements vides sont conservés dans la fiche : elle doit montrer ce qui manque.
 - Guilde : `guild_member` → `guild` (nom) et `guild_rank` (`guildid` + `rid` = `gm.rank` → `rname`).
 - Les jointures inter-bases sont qualifiées avec les noms de base du profil, le serveur MySQL étant commun.
+
+## Modération — quatre tables, une seule vue
+
+Le module Comptes sanctionne un compte à la fois ; celui-ci répond à « qui est sanctionné, par qui, pourquoi ». Il consolide quatre tables aux colonnes voisines mais non identiques :
+
+- `auth.account_banned` (id, bandate, unbandate, bannedby, banreason, **active**)
+- `auth.ip_banned` (ip, bandate, unbandate, bannedby, banreason) — **pas de colonne `active`** : l'état se déduit de `unbandate`
+- `characters.character_banned` (guid, …, active) — jointure inter-bases
+- `auth.account_muted` (guid, mutedate, **mutetime**, mutedby, mutereason) — `mutetime` est une **durée**, pas une date de fin
+
+Convention commune : `unbandate == bandate` vaut **définitif**.
+
+Commandes : `.ban account|character|ip|playeraccount <cible> <durée> <motif>`, `.unban …`, `.baninfo …`. **`ban playeraccount` bannit le compte d'un personnage** sans avoir à le chercher. Les écritures passent par les commandes, jamais par SQL : elles tiennent les tables à jour **et déconnectent le joueur** — un INSERT laisserait un banni connecté.
+
+Un bannissement d'IP touche tout un foyer : l'interface l'avertit avant confirmation.
 
 ## Personnages — la limite de `.modify money`
 

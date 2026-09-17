@@ -1,0 +1,131 @@
+<UserControl x:Class="AzerothManager.Views.ModerationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="340" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="🔄  Charger" Style="{StaticResource SuccessButton}"
+                        Command="{Binding LoadCommand}" />
+                <CheckBox Content="En cours seulement" IsChecked="{Binding ActiveOnly}"
+                          VerticalAlignment="Center" />
+            </StackPanel>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Sanctions}" SelectedItem="{Binding Selected}"
+                      IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                      EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Type" Binding="{Binding KindText}" Width="100" />
+                    <DataGridTextColumn Header="Cible" Binding="{Binding Target}" Width="*" MinWidth="120" />
+                    <DataGridTextColumn Header="État" Binding="{Binding StateText}" Width="80" />
+                    <DataGridTextColumn Header="Durée" Binding="{Binding DurationText}" Width="170" />
+                    <DataGridTextColumn Header="Motif" Binding="{Binding ReasonText}" Width="*" MinWidth="120" />
+                    <DataGridTextColumn Header="Par" Binding="{Binding ByText}" Width="110" />
+                    <DataGridTextColumn Header="Le" Binding="{Binding DateText}" Width="125" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Grid.Row="2" Text="{Binding Status}" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+        </Grid>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Padding="10" CornerRadius="4" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Prononcer une sanction" Style="{StaticResource SectionTitle}"
+                                   Margin="0,0,0,4" />
+
+                        <TextBlock Text="Porte sur" Style="{StaticResource Caption}" />
+                        <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding Target}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="Cible" Style="{StaticResource Caption}" />
+                        <TextBox Text="{Binding TargetName, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Nom de compte, nom de personnage, ou adresse IP selon le type choisi" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Durée" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Duration, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="10m, 2h, 1d… ou 0 pour un bannissement définitif" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Motif" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Button Content="🛡  Bannir" Style="{StaticResource DangerButton}"
+                                Command="{Binding ApplyCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Text="« Compte d'un personnage » évite de chercher à quel compte appartient un joueur : la commande s'en charge." />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Foreground="{StaticResource Warning}"
+                                   Text="Une adresse IP est souvent partagée entre plusieurs joueurs, voire tout un foyer : la sanction les touchera tous." />
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1"
+                        IsEnabled="{Binding HasSelection}">
+                    <StackPanel>
+                        <TextBlock Text="Sanction sélectionnée" Style="{StaticResource SectionTitle}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="{Binding Selected.KindText, Mode=OneWay}" />
+                            <Run Text=" · " />
+                            <Run Text="{Binding Selected.Target, Mode=OneWay}" FontWeight="SemiBold" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                            <Run Text="{Binding Selected.DurationText, Mode=OneWay}" />
+                            <Run Text=" · " />
+                            <Run Text="{Binding Selected.StateText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0">
+                            <Run Text="Motif : " /><Run Text="{Binding Selected.ReasonText, Mode=OneWay}" />
+                        </TextBlock>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="↩  Lever" Style="{StaticResource SuccessButton}"
+                                    Command="{Binding LiftCommand}" />
+                            <Button Content="Détail serveur" Command="{Binding DetailsCommand}" Margin="0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Ce que ce module ajoute" Style="{StaticResource SectionTitle}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="Le module Comptes sanctionne un compte à la fois. Celui-ci réunit les quatre tables — comptes, personnages, adresses IP et mutes — pour répondre à « qui est sanctionné en ce moment, par qui, et pourquoi », et garde la trace des sanctions levées ou expirées." />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -69,7 +69,7 @@ public sealed record CharacterSheet(
     public string ClassName => GameReference.ClassName(Class);
     public string FactionName => GameReference.FactionName(Race);
     public string GenderName => Gender == 0 ? "Masculin" : "Féminin";
-    public string MoneyText => ItemReference.Money(Money);
+    public string MoneyText => ItemReference.Money(Money, dashWhenZero: false);
     public string LocationText => ZoneName == "—" ? MapName : $"{ZoneName} ({MapName})";
     public string GuildText => string.IsNullOrEmpty(GuildName) ? "Sans guilde" : $"{GuildName} — {GuildRank}";
 

@@ -246,10 +246,15 @@ public static class ItemReference
         return match.Label ?? $"Sous-type {subclass}";
     }
 
-    /// <summary>Convertit un prix en pièces de cuivre vers la notation or / argent / cuivre.</summary>
-    public static string Money(long copper)
+    /// <summary>
+    /// Convertit un montant en pièces de cuivre vers la notation or / argent / cuivre.
+    ///
+    /// Zéro n'a pas le même sens partout : pour un prix, il signifie « invendable », d'où
+    /// le tiret ; pour la bourse d'un personnage, c'est une valeur réelle, d'où « 0c ».
+    /// </summary>
+    public static string Money(long copper, bool dashWhenZero = true)
     {
-        if (copper <= 0) return "—";
+        if (copper <= 0) return dashWhenZero ? "—" : "0c";
         var g = copper / 10000;
         var s = copper % 10000 / 100;
         var c = copper % 100;

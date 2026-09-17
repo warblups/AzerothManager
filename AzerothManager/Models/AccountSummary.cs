@@ -4,7 +4,7 @@ namespace AzerothManager.Models;
 public sealed record AccountCharacter(
     int Guid, string Name, int Level, int Race, int Class, long Money, bool Online)
 {
-    public string MoneyText => ItemReference.Money(Money);
+    public string MoneyText => ItemReference.Money(Money, dashWhenZero: false);
     public string RaceName => GameReference.RaceName(Race);
     public string ClassName => GameReference.ClassName(Class);
 }
