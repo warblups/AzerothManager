@@ -89,6 +89,14 @@ Deux écarts assumés : le bandeau Production est en `#8e1d2d`, plus sombre que 
 
 CommunityToolkit.Mvvm · MySqlConnector · SSH.NET · Microsoft.Data.Sqlite · Serilog · AvalonEdit (éditeur SQL : coloration, auto-complétion, favoris, historique, export CSV, transactions).
 
+## Méthode : vérifier contre le serveur avant d'écrire le code
+
+Le profil actif est dans la base locale, mot de passe chiffré DPAPI sous la session Windows de l'utilisateur. Une session lancée sous ce compte peut donc **interroger le vrai serveur en lecture seule** pour valider une requête avant de l'intégrer. Reconstruire le script au besoin : lire la ligne active de `Servers`, déchiffrer via `ProtectedData.Unprotect` avec l'entropie `AzerothManager.Secrets.v1`, charger le `MySqlConnector.dll` du dossier de build, refuser tout ce qui n'est pas `SELECT`/`SHOW`/`DESCRIBE`, et ne jamais afficher de mot de passe.
+
+Cette méthode a évité plusieurs erreurs réelles : `StatsCount` n'existe pas dans `item_template`, `dmg_min1` est un `Single` et `socketColor_1` un `SByte`, `character_stats` était vide, les paramètres dans `LIMIT`/`OFFSET` passent bien. Conclusion générale : **vérifier les noms de colonnes, les types et les offsets DBC sur les fichiers et le serveur réels**, jamais de mémoire. Les élargissements de type sont tolérés par MySqlConnector (`Byte`/`UInt16`/`UInt32` → `GetInt32`, `COUNT` → `GetInt32`), ce qui a été mesuré et non supposé.
+
+Conséquence pratique : fermer l'application avant tout `dotnet build`, l'exécutable étant verrouillé.
+
 ## Canal d'exécution : console GM ou SQL (CdC §5)
 
 Règle structurante — chaque fonction passe par une commande GM, par du SQL, ou par les deux, et le choix découle du besoin, pas de la commodité d'implémentation :
