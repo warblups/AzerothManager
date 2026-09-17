@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu** et **Armurerie**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM** et **Restauration ciblée**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : modules v1.1 restants (tickets GM, restauration ciblée, téléportation, métiers) ou v1.2 (édition du monde).
+**Prochaine étape** : v1.1 restante (téléportation, métiers, modification en direct) ou v1.2 (édition du monde). Une carte des joueurs connectés est envisagée — voir la note plus bas.
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -126,6 +126,19 @@ Vérifié sur les fichiers réels, pas de mémoire :
 - **`Map.dbc`** : nom localisé à partir du champ **5**. **`AreaTable.dbc`** : à partir du champ **11**. Même règle que les sorts — balayer la plage, ne pas figer un créneau.
 
 Le client n'est requis qu'à l'import : tout part dans SQLite (`DbcIcon`, `DbcSpell`, `IconImage`), et l'application est ensuite autonome. Chemin du client dans `Settings` sous `client.path`.
+
+## Tickets GM — pièges relevés (vérifié aux sources)
+
+- **C'est la colonne `type` qui fait foi pour l'état**, pas `closedBy` : côté serveur `IsClosed()` teste `type != TICKET_TYPE_OPEN`. Un ticket clos depuis la console garde `closedBy` à zéro. Filtrer sur `closedBy` afficherait des tickets clos comme ouverts. `type` : 0 ouvert, 1 clos, 2 personnage supprimé.
+- **`assignedTo` et `closedBy` sont des GUID de personnage**, pas des noms : joindre `characters` pour afficher un nom.
+- Toutes les commandes `.ticket *` sont `Console::Yes`. Signatures : `assign <id> <nom>`, `comment <id> <texte>`, `response append <id> <texte>`, `complete <id> [réponse]`, `close <id>`, `escalate <id>`, `delete <id>`, `viewid <id>`.
+- `.go ticket <id>`, `.appear` et `.summon` agissent sur le **personnage GM qui exécute** : ils exigent une session connectée, d'où l'avertissement dans l'interface.
+
+## Restauration ciblée
+
+- La suppression d'un personnage conserve la ligne dans `characters` et déplace le nom dans `deleteInfos_Name`, avec `deleteInfos_Account` et `deleteDate`. D'où la lecture en SQL.
+- `.character deleted restore <recherche> [nouveauNom] [nouveauCompte]` — le nouveau nom sert si l'ancien a été repris, le nouveau compte si celui d'origine a disparu.
+- **Sans rapport avec `.account delete`**, qui efface les personnages en dur : ceux-là n'apparaissent jamais dans la liste des récupérables.
 
 ## Armurerie — pièges du schéma (vérifié sur serveur réel)
 

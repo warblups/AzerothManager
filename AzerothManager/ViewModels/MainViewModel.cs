@@ -28,7 +28,8 @@ public partial class MainViewModel : ObservableObject
                          ItemCatalogViewModel itemCatalog,
                          AccountsViewModel accounts,
                          MailViewModel mail,
-                         ArmoryViewModel armory)
+                         ArmoryViewModel armory,
+                         TicketsViewModel tickets, RestoreViewModel restore)
     {
         Context = context;
 
@@ -95,13 +96,30 @@ public partial class MainViewModel : ObservableObject
             Content = armory
         });
 
+        Items.Add(new NavigationItem
+        {
+            Icon = "🎫",
+            Title = "Tickets GM",
+            Version = "v1.1",
+            IsAvailable = true,
+            Content = tickets
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "♻",
+            Title = "Restauration",
+            Version = "v1.1",
+            IsAvailable = true,
+            Content = restore
+        });
+
         // Modules planifiés : affichés dès maintenant pour que l'ordre de construction
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
             ("🧙", "Personnages", "v1.0"),
             ("🛡", "Modération", "v1.0"),
-            ("🎫", "Tickets GM", "v1.1"),
             ("🌀", "Téléportation", "v1.1"),
             ("🗺", "Édition du monde", "v1.2"),
             ("📜", "Logs", "v1.2")

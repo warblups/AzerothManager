@@ -36,6 +36,12 @@
             <DataTemplate DataType="{x:Type vm:ArmoryViewModel}">
                 <views:ArmoryView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:TicketsViewModel}">
+                <views:TicketsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:RestoreViewModel}">
+                <views:RestoreView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
