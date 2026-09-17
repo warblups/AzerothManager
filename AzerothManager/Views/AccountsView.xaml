@@ -146,6 +146,12 @@
                             <Button Content="Lever" Command="{Binding UnbanCommand}" />
                         </StackPanel>
 
+                        <TextBlock Text="Suppression" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Text="Détruit aussi les personnages du compte, en dur : aucune restauration n'est possible, et une commande GM ne se rejoue pas à l'envers." />
+                        <Button Content="🗑  Supprimer le compte" Style="{StaticResource DangerButton}"
+                                Command="{Binding DeleteCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+
                         <TextBlock Text="Personnages" Style="{StaticResource SectionTitle}" />
                         <Border BorderBrush="{StaticResource BorderB}" BorderThickness="1" Height="130">
                             <DataGrid ItemsSource="{Binding Characters}" SelectedItem="{Binding SelectedCharacter}"

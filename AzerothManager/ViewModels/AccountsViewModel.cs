@@ -200,6 +200,45 @@ public partial class AccountsViewModel : ObservableObject
         NewPassword = "";
     }
 
+    /// <summary>
+    /// Suppression définitive. La commande détruit aussi les personnages, en dur : ni la
+    /// restauration ciblée ni une transaction ne peuvent revenir en arrière. La confirmation
+    /// annonce donc précisément ce qui sera perdu.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteAsync()
+    {
+        if (Selected is null) return;
+
+        var name = Selected.Username;
+        var count = Selected.CharacterCount;
+        var characters = count == 0
+            ? "Ce compte n'a aucun personnage."
+            : count == 1
+                ? "Son personnage sera détruit définitivement."
+                : $"Ses {count} personnages seront détruits définitivement.";
+
+        var message = $"""
+            Supprimer le compte « {name} » ?
+
+            {characters}
+
+            La suppression est immédiate et irréversible : les personnages sont effacés en dur,
+            sans passer par la suppression différée, donc sans restauration possible.
+            """;
+
+        var confirm = System.Windows.MessageBox.Show(
+            message,
+            "Suppression définitive",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning,
+            System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+        await RunAsync(() => _accounts.DeleteAsync(name), $"Suppression du compte {name}");
+        Selected = null;
+    }
+
     [RelayCommand]
     private async Task ChangePasswordAsync()
     {

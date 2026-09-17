@@ -164,6 +164,15 @@ public sealed class AccountService
         return _gm.ExecuteAsync(command, ct);
     }
 
+    /// <summary>
+    /// Supprime le compte. Vérifié dans AccountMgr::DeleteAccount : la commande expulse les
+    /// joueurs connectés puis détruit tous les personnages du compte avec deleteFinally = true,
+    /// c'est-à-dire en dur. La restauration ciblée du §9 ne pourra rien récupérer, et aucune
+    /// transaction ne protège une commande GM.
+    /// </summary>
+    public Task<GmCommandResult> DeleteAsync(string username, CancellationToken ct = default)
+        => _gm.ExecuteAsync($"account delete {username}", ct);
+
     /// <summary>La commande attend le mot de passe suivi de sa confirmation.</summary>
     public Task<GmCommandResult> SetPasswordAsync(string username, string password, CancellationToken ct = default)
         => _gm.ExecuteAsync($"account set password {username} {password} {password}", ct);
