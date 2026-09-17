@@ -27,6 +27,9 @@
             <DataTemplate DataType="{x:Type vm:ItemCatalogViewModel}">
                 <views:ItemCatalogView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AccountsViewModel}">
+                <views:AccountsView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

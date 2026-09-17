@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Trois modules en place : **Configuration des serveurs** (CRUD des profils, DPAPI, tests MySQL/SSH/SOAP, serveur actif), **Console SQL** (multi-onglets AvalonEdit, favoris, historique, export CSV) et **Console GM** (SOAP). Les autres modules apparaissent dans le rail de navigation, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets** (icônes et noms de sorts issus des DBC) et **Comptes**. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : catalogue d'objets (`ItemCatalogService`), brique transverse réutilisée par six modules.
+**Prochaine étape** : Courrier en jeu, puis Armurerie (la brique DBC est déjà là).
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -105,6 +105,27 @@ Deux pièges qui ont dicté l'implémentation :
 
 - `SOAP.IP` vaut `127.0.0.1` par défaut : le port n'est pas joignable depuis l'extérieur. Et l'authentification Basic circule **en clair**. D'où le **tunnel SSH** (`ForwardedPortLocal`, port local 0) plutôt qu'exposer `SOAP.IP` sur le réseau. Le tunnel est monté par appel — simple, sans état partagé ; à mettre en cache si la latence gêne.
 - En mode lecture seule, les commandes GM sont refusées **sauf** une liste blanche d'informatives (`GmCommandService.ReadOnlyAllowed` : `server info`, `pinfo`, `lookup`, `ticket list`…), une commande GM étant par défaut une écriture.
+
+## Données du client 3.3.5a — icônes et noms de sorts
+
+Vérifié sur les fichiers réels, pas de mémoire :
+
+- **DBC** = format WDBC, en-tête de 20 octets (magie, nb d'enregistrements, nb de champs, taille d'enregistrement, taille du bloc de chaînes), tous les champs sur 4 octets, les chaînes étant des décalages dans le bloc final.
+- **`ItemDisplayInfo.dbc` champ 5** = nom d'icône. `item_template.displayid` pointe directement dessus : **`Item.dbc` est inutile**.
+- **Noms de sorts** : seize créneaux de langue à partir du **champ 136** de `Spell.dbc`. Un client localisé ne remplit **que le sien** — sur un client français, le créneau anglais est vide pour les 49 839 sorts. Ne jamais coder un créneau en dur : `DbcReader.GetFirstNonEmptyString` balaie la plage.
+- **Les icônes sont des TGA**, pas des BLP : 128×128, non compressés, 32 bits BGRA, origine en bas à gauche. WPF ne lit pas le TGA ; `GameClientService.LoadTga` couvre ce seul cas.
+- **`spell_dbc` en base ne sert à rien** pour les noms : 4 518 sorts personnalisés seulement, aucun nom localisé.
+
+Le client n'est requis qu'à l'import : tout part dans SQLite (`DbcIcon`, `DbcSpell`, `IconImage`), et l'application est ensuite autonome. Chemin du client dans `Settings` sous `client.path`.
+
+## Comptes — schéma auth (vérifié sur serveur réel)
+
+- `account` porte `salt`/`verifier` (SRP6), `expansion`, `last_ip`, `last_login`, `joindate`, `online`, `locked`, `mutetime`/`mutereason`/`muteby`.
+- `account_access` (id, gmlevel, **RealmID**, comment) — le rang est **par royaume**, `-1` valant tous.
+- `account_banned` (id, bandate, unbandate, bannedby, banreason, **active**) : `unbandate == bandate` signifie **définitif**.
+- `ip_banned` (ip, bandate, unbandate, bannedby, banreason).
+- Les deux bases étant sur le même serveur MySQL, le comptage des personnages se fait par sous-requête inter-bases qualifiée avec le nom de base du profil.
+- Commandes câblées, toutes `Console::Yes` donc utilisables par SOAP : `.account create|delete`, `.account set password|gmlevel|addon`, `.ban account <nom> <durée> <motif>` (durée `10m`/`2h`/`1d`, `0` = définitif), `.unban account`, `.mute <personnage> <minutes> <motif>`, `.unmute`, `.kick`. **Mute et kick visent un personnage, pas un compte.**
 
 ## Comptes — contrainte SRP6 (vérifié aux sources)
 

@@ -52,6 +52,7 @@ public partial class App : Application
         var gm = new GmCommandService(context);
         var sqlEditor = new SqlEditorService(context, mySql);
         var itemCatalog = new ItemCatalogService(mySql);
+        var accountService = new AccountService(mySql, gm, context);
         var gameClient = new GameClientService();
         GameClientService.Current = gameClient;
 
@@ -65,7 +66,8 @@ public partial class App : Application
         var gmConsole = new GmConsoleViewModel(gm, context);
         var sqlConsole = new SqlEditorViewModel(sqlEditor, gm, context);
         var catalog = new ItemCatalogViewModel(itemCatalog, context, gameClient);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog);
+        var accounts = new AccountsViewModel(accountService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts);
 
         new MainWindow { DataContext = main }.Show();
     }

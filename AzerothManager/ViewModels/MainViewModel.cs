@@ -25,7 +25,8 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(ServerContext context, ServerConfigViewModel serverConfig,
                          GmConsoleViewModel gmConsole, SqlEditorViewModel sqlConsole,
-                         ItemCatalogViewModel itemCatalog)
+                         ItemCatalogViewModel itemCatalog,
+                         AccountsViewModel accounts)
     {
         Context = context;
 
@@ -45,6 +46,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.0",
             IsAvailable = true,
             Content = sqlConsole
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "👤",
+            Title = "Comptes",
+            Version = "v1.0",
+            IsAvailable = true,
+            Content = accounts
         });
 
         Items.Add(new NavigationItem
@@ -69,7 +79,6 @@ public partial class MainViewModel : ObservableObject
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
-            ("👤", "Comptes", "v1.0"),
             ("🧙", "Personnages", "v1.0"),
             ("✉", "Courrier en jeu", "v1.0"),
             ("🛡", "Modération", "v1.0"),
