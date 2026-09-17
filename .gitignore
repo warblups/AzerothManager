@@ -23,3 +23,7 @@ Backup/
 *.db-shm
 *.db-wal
 config.json
+
+# Cartes extraites du client : ressources du jeu, jamais versionnées
+maps/
+*.blp

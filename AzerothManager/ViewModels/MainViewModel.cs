@@ -29,7 +29,8 @@ public partial class MainViewModel : ObservableObject
                          AccountsViewModel accounts,
                          MailViewModel mail,
                          ArmoryViewModel armory,
-                         TicketsViewModel tickets, RestoreViewModel restore)
+                         TicketsViewModel tickets, RestoreViewModel restore,
+                         PlayerMapViewModel playerMap)
     {
         Context = context;
 
@@ -94,6 +95,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.1",
             IsAvailable = true,
             Content = armory
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "🗺",
+            Title = "Carte des joueurs",
+            Version = "v2.0",
+            IsAvailable = true,
+            Content = playerMap
         });
 
         Items.Add(new NavigationItem

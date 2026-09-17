@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM** et **Restauration ciblée**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée** et **Carte des joueurs**. Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
@@ -126,6 +126,18 @@ Vérifié sur les fichiers réels, pas de mémoire :
 - **`Map.dbc`** : nom localisé à partir du champ **5**. **`AreaTable.dbc`** : à partir du champ **11**. Même règle que les sorts — balayer la plage, ne pas figer un créneau.
 
 Le client n'est requis qu'à l'import : tout part dans SQLite (`DbcIcon`, `DbcSpell`, `IconImage`), et l'application est ensuite autonome. Chemin du client dans `Settings` sous `client.path`.
+
+## Carte des joueurs — où sont les ressources du client
+
+Piège principal : **l'art d'interface et les DBC ne sont pas dans `common.MPQ`** mais dans l'archive de **langue**, sous `Data\<locale>\locale-<locale>.mpq`. Chercher dans les archives racine ne donne rien.
+
+- Fonds de continent : `Interface\WorldMap\<Dossier>\<Dossier>1..12.blp`, douze tuiles BLP2/DXT de 256×256 en 4 colonnes × 3 lignes. Le client n'affiche que **1002×668** du damier 1024×768 : recadrer pareil, sinon la projection est décalée.
+- Dossiers : `Azeroth` (carte 0), `Kalimdor` (1), `Expansion01` (530), `Northrend` (571).
+- **Le texte des continents est gravé dans l'image** : prendre l'archive de la langue du client, pas la première venue.
+- Bornes de projection dans `WorldMapArea.dbc`, lignes où `areaID = 0`. Les axes du monde sont tournés :
+  `pixelX = (Top − position_y) / (Top − Bottom) × largeur` et `pixelY = (Left − position_x) / (Left − Right) × hauteur`.
+- `tools/extract_worldmaps.py` (mpyq + Pillow) extrait et assemble les quatre PNG dans `%AppData%\AzerothManager\maps`. **Les images ne sont jamais versionnées** : ce sont des ressources du jeu, elles restent sur le poste.
+- Une carte d'instance n'a pas de fond : ces joueurs sont listés à part plutôt que placés au hasard.
 
 ## Tickets GM — pièges relevés (vérifié aux sources)
 

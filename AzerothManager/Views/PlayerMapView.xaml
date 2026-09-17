@@ -1,0 +1,135 @@
+<UserControl x:Class="AzerothManager.Views.PlayerMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="300" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Content="🔄  Actualiser" Style="{StaticResource SuccessButton}"
+                        Command="{Binding LoadCommand}" Margin="8,0,0,0" />
+                <CheckBox DockPanel.Dock="Right" Content="Inclure les déconnectés"
+                          IsChecked="{Binding IncludeOffline}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <ComboBox Width="200" HorizontalAlignment="Left" Margin="0"
+                          ItemsSource="{Binding Continents}" SelectedItem="{Binding Continent}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </DockPanel>
+
+            <!-- La carte et les marqueurs partagent le même repère : le Viewbox les
+                 met à l'échelle ensemble, donc les pastilles restent alignées. -->
+            <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1"
+                    Background="{StaticResource InputBg}" CornerRadius="4">
+                <Grid>
+                    <Viewbox Stretch="Uniform" Margin="4">
+                        <Canvas Width="{Binding MapWidth}" Height="{Binding MapHeight}">
+                            <Image Source="{Binding MapImage}"
+                                   Width="{Binding MapWidth}" Height="{Binding MapHeight}" />
+
+                            <ItemsControl ItemsSource="{Binding Markers}"
+                                          Width="{Binding MapWidth}" Height="{Binding MapHeight}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding MarkerX}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding MarkerY}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Ellipse Width="10" Height="10" StrokeThickness="1.5"
+                                                 Stroke="#FF101018" ToolTip="{Binding Tooltip}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#FFE03030" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAlliance}" Value="True">
+                                                            <Setter Property="Fill" Value="#FF3080E0" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Canvas>
+                    </Viewbox>
+
+                    <!-- Fond absent : on explique comment le produire plutôt que d'afficher du vide -->
+                    <Border Background="#CC1a1a2e" Padding="20"
+                            Visibility="{Binding MapMissing, Converter={StaticResource BoolToVis}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="560">
+                            <TextBlock Text="Fond de carte absent" FontSize="15" FontWeight="Bold"
+                                       Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />
+                            <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Text="Les fonds de carte sont des ressources du jeu : ils restent sur ce poste et ne sont pas distribués avec l'application. Extrayez-les depuis votre client avec le script fourni." />
+                            <TextBlock FontFamily="Consolas" TextWrapping="Wrap" Margin="0,10,0,0"
+                                       HorizontalAlignment="Center" Foreground="{StaticResource Muted}"
+                                       Text="python tools\extract_worldmaps.py &quot;E:\WoW Clients\3.3.5a&quot;" />
+                            <Button Content="📂  Ouvrir le dossier des cartes" Margin="0,12,0,0"
+                                    HorizontalAlignment="Center" Command="{Binding OpenMapsFolderCommand}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="2" Text="{Binding Status}" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+        </Grid>
+
+        <!-- Joueurs du continent, et ceux qu'on ne peut pas placer -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="160" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0">
+                <TextBlock DockPanel.Dock="Top" Text="Sur ce continent" Style="{StaticResource SectionTitle}"
+                           Margin="0,0,0,4" />
+                <Border BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                    <DataGrid ItemsSource="{Binding Markers}" IsReadOnly="True"
+                              AutoGenerateColumns="False" SelectionMode="Single"
+                              HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="Niv" Binding="{Binding Level}" Width="40" />
+                            <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="120" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </DockPanel>
+
+            <TextBlock Grid.Row="1" Text="Hors des quatre continents" Style="{StaticResource SectionTitle}" />
+
+            <Border Grid.Row="2" BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                <DataGrid ItemsSource="{Binding Elsewhere}" IsReadOnly="True"
+                          AutoGenerateColumns="False" SelectionMode="Single" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" />
+                        <DataGridTextColumn Header="Carte" Binding="{Binding MapId}" Width="50" />
+                        <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="110" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
