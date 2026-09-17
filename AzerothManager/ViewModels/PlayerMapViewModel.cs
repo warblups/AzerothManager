@@ -139,7 +139,7 @@ public partial class PlayerMapViewModel : ObservableObject
 
             // Une zone sans rectangle n'est pas projetable : elle reste dans le tableau,
             // mais on ne l'invente pas sur la carte.
-            foreach (var z in _zones.Where(z => z.MapId == Continent.MapId && z.Total > 0 && z.X > 0))
+            foreach (var z in _zones.Where(z => z.MapId == Continent.MapId && z.Total > 0 && z.Projected))
                 ZoneBubbles.Add(z);
         }
 
@@ -155,7 +155,7 @@ public partial class PlayerMapViewModel : ObservableObject
             {
                 Continent = continent,
                 Image = LoadMap(continent),
-                Bubbles = [.. _zones.Where(z => z.MapId == continent.MapId && z.Total > 0 && z.X > 0)],
+                Bubbles = [.. _zones.Where(z => z.MapId == continent.MapId && z.Total > 0 && z.Projected)],
                 Players = [.. _placed.Where(p => p.MapId == continent.MapId)]
             });
         }

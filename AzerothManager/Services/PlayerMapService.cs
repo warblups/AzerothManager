@@ -72,46 +72,65 @@ public sealed class PlayerMapService
     }
 
     /// <summary>
-    /// Effectifs par zone, tous continents confondus. La bulle est placée au centre de la
-    /// zone lu dans WorldMapArea.dbc ; une zone sans rectangle reste dans la liste mais
-    /// n'est pas projetée.
+    /// Effectifs par zone, déduits de la position et non de characters.zone.
+    ///
+    /// Cette colonne n'est écrite qu'à la déconnexion : sur un serveur peuplé de bots elle
+    /// vaut zéro pour la quasi-totalité des personnages, et un regroupement dessus produit
+    /// un seul tas inutile. La position, elle, est toujours juste : on cherche donc la zone
+    /// qui la contient dans les rectangles de WorldMapArea.
     /// </summary>
     public async Task<IReadOnlyList<ZonePopulation>> ZonePopulationAsync(
         bool includeOffline = false, CancellationToken ct = default)
     {
-        var list = new List<ZonePopulation>();
+        var (placed, elsewhere) = await OnlinePlayersAsync(includeOffline, ct);
 
-        await using var cnx = await _mySql.OpenAsync(MySqlService.Db.Characters, ct);
-        await using var cmd = cnx.CreateCommand();
-        // Les races 1, 3, 4, 7 et 11 sont l'Alliance ; les autres la Horde.
-        cmd.CommandText = $"""
-            SELECT zone, map,
-                   SUM(race IN (1,3,4,7,11)) AS alliance,
-                   SUM(race NOT IN (1,3,4,7,11)) AS horde
-            FROM characters
-            WHERE deleteDate IS NULL {(includeOffline ? "" : "AND online = 1")}
-            GROUP BY zone, map
-            ORDER BY (alliance + horde) DESC
-            """;
+        var buckets = new Dictionary<int, Bucket>();
+        var unknownAlliance = 0;
+        var unknownHorde = 0;
 
-        await using var rd = await cmd.ExecuteReaderAsync(ct);
-        while (await rd.ReadAsync(ct))
+        foreach (var player in placed.Concat(elsewhere))
         {
-            var zoneId = rd.GetInt32(0);
-            var mapId = rd.GetInt32(1);
-            var alliance = rd.GetInt32(2);
-            var horde = rd.GetInt32(3);
-
-            double x = 0, y = 0;
-            var center = _client.ZoneCenter(zoneId);
-            if (center is { } c && Continent.ForMap(c.MapId) is { } continent)
+            var zone = _client.ZoneAt(player.MapId, player.WorldX, player.WorldY);
+            if (zone is null)
             {
-                (x, y) = continent.Project(c.X, c.Y);
-                mapId = c.MapId;
+                if (player.IsAlliance) unknownAlliance++; else unknownHorde++;
+                continue;
             }
 
-            list.Add(new ZonePopulation(zoneId, _client.AreaName(zoneId), mapId, alliance, horde, x, y));
+            if (!buckets.TryGetValue(zone.AreaId, out var bucket))
+            {
+                var continent = Continent.ForMap(zone.MapId);
+                var (x, y) = continent?.Project(zone.X, zone.Y) ?? (0, 0);
+                bucket = new Bucket(_client.AreaName(zone.AreaId), zone.MapId, x, y);
+                buckets[zone.AreaId] = bucket;
+            }
+
+            if (player.IsAlliance) bucket.Alliance++; else bucket.Horde++;
         }
+
+        var list = buckets
+            .Select(kv => new ZonePopulation(kv.Key, kv.Value.Name, kv.Value.MapId,
+                                             kv.Value.Alliance, kv.Value.Horde, kv.Value.X, kv.Value.Y))
+            .OrderByDescending(z => z.Total)
+            .ToList();
+
+        // Les positions hors de tout rectangle connu — donjons, instances — sont annoncées
+        // plutôt que réparties au hasard.
+        if (unknownAlliance + unknownHorde > 0)
+            list.Add(new ZonePopulation(0, "Hors zone cartographiée", -1,
+                                        unknownAlliance, unknownHorde, 0, 0));
+
         return list;
+    }
+
+    /// <summary>Accumulateur par zone, mutable pour éviter de recopier un tuple à chaque joueur.</summary>
+    private sealed class Bucket(string name, int mapId, double x, double y)
+    {
+        public string Name { get; } = name;
+        public int MapId { get; } = mapId;
+        public double X { get; } = x;
+        public double Y { get; } = y;
+        public int Alliance { get; set; }
+        public int Horde { get; set; }
     }
 }

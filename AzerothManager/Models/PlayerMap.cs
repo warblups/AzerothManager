@@ -68,6 +68,16 @@ public sealed record PlayerPosition(
 public sealed record ZonePopulation(
     int ZoneId, string ZoneName, int MapId, int Alliance, int Horde, double X, double Y)
 {
+    /// <summary>
+    /// Vrai si la bulle tombe dans l'image du continent.
+    ///
+    /// Certaines zones n'y tiennent pas : les départs draeneï et elfe de sang sont sur la
+    /// carte 530 dans les fichiers du jeu, mais leurs rectangles sortent largement du cadre
+    /// d'Outreterre — le client les rattache ailleurs pour l'affichage. Plutôt que de les
+    /// dessiner hors image, on les laisse au tableau.
+    /// </summary>
+    public bool Projected => X > 0 && Y > 0 && X <= Continent.Width && Y <= Continent.Height;
+
     public int Total => Alliance + Horde;
     public string Counts => $"{Alliance} · {Horde}";
     public bool AllianceMajority => Alliance >= Horde;

@@ -38,7 +38,7 @@ public sealed class GameClientService
     private Dictionary<int, string>? _spells;
     private Dictionary<int, string>? _maps;
     private Dictionary<int, string>? _areas;
-    private Dictionary<int, (int MapId, float X, float Y)>? _zones;
+    private List<ZoneRect>? _zoneRects;
     private readonly Dictionary<int, ImageSource?> _imageCache = [];
 
     /// <summary>
@@ -133,7 +133,7 @@ public sealed class GameClientService
         _spells = null;
         _maps = null;
         _areas = null;
-        _zones = null;
+        _zoneRects = null;
         _imageCache.Clear();
 
         Log.Information("Import DBC : {Icons} icônes, {Spells} sorts, {Maps} cartes, {Areas} zones, {Rects} rectangles",
@@ -160,13 +160,18 @@ public sealed class GameClientService
         {
             using var cmd = cnx.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = "INSERT INTO DbcZone (AreaId, MapId, CenterX, CenterY) " +
-                              "VALUES ($a, $m, $x, $y) ON CONFLICT(AreaId) DO UPDATE SET " +
-                              "MapId = $m, CenterX = $x, CenterY = $y";
+            cmd.CommandText =
+                "INSERT INTO DbcZone (AreaId, MapId, CenterX, CenterY, MinX, MaxX, MinY, MaxY) " +
+                "VALUES ($a, $m, $x, $y, $x0, $x1, $y0, $y1) ON CONFLICT(AreaId) DO UPDATE SET " +
+                "MapId = $m, CenterX = $x, CenterY = $y, MinX = $x0, MaxX = $x1, MinY = $y0, MaxY = $y1";
             var pa = cmd.Parameters.Add("$a", SqliteType.Integer);
             var pm = cmd.Parameters.Add("$m", SqliteType.Integer);
             var px = cmd.Parameters.Add("$x", SqliteType.Real);
             var py = cmd.Parameters.Add("$y", SqliteType.Real);
+            var px0 = cmd.Parameters.Add("$x0", SqliteType.Real);
+            var px1 = cmd.Parameters.Add("$x1", SqliteType.Real);
+            var py0 = cmd.Parameters.Add("$y0", SqliteType.Real);
+            var py1 = cmd.Parameters.Add("$y1", SqliteType.Real);
 
             var dbc = new DbcReader(path);
             for (var row = 0; row < dbc.RecordCount; row++)
@@ -184,6 +189,10 @@ public sealed class GameClientService
                 pm.Value = dbc.GetInt(row, 1);
                 px.Value = (xHigh + xLow) / 2.0;
                 py.Value = (yHigh + yLow) / 2.0;
+                px0.Value = Math.Min(xHigh, xLow);
+                px1.Value = Math.Max(xHigh, xLow);
+                py0.Value = Math.Min(yHigh, yLow);
+                py1.Value = Math.Max(yHigh, yLow);
                 cmd.ExecuteNonQuery();
                 count++;
             }
@@ -301,21 +310,48 @@ public sealed class GameClientService
     public string AreaName(int areaId) =>
         (_areas ??= Names("DbcArea", "AreaId")).GetValueOrDefault(areaId, areaId == 0 ? "—" : $"zone {areaId}");
 
-    /// <summary>Centre d'une zone en coordonnées monde, si le client en a fourni le rectangle.</summary>
-    public (int MapId, float X, float Y)? ZoneCenter(int areaId)
+    /// <summary>Rectangle d'une zone en coordonnées monde, avec son centre.</summary>
+    public sealed record ZoneRect(int AreaId, int MapId, float X, float Y,
+                                  float MinX, float MaxX, float MinY, float MaxY)
     {
-        if (_zones is null)
-        {
-            _zones = [];
-            using var cnx = LocalDatabase.Open();
-            using var cmd = cnx.CreateCommand();
-            cmd.CommandText = "SELECT AreaId, MapId, CenterX, CenterY FROM DbcZone";
-            using var rd = cmd.ExecuteReader();
-            while (rd.Read())
-                _zones[rd.GetInt32(0)] = (rd.GetInt32(1), (float)rd.GetDouble(2), (float)rd.GetDouble(3));
-        }
-        return _zones.TryGetValue(areaId, out var z) ? z : null;
+        public double Area => (double)(MaxX - MinX) * (MaxY - MinY);
+        public bool Contains(float x, float y) => x >= MinX && x <= MaxX && y >= MinY && y <= MaxY;
     }
+
+    private List<ZoneRect> ZoneRects()
+    {
+        if (_zoneRects is not null) return _zoneRects;
+
+        _zoneRects = [];
+        using var cnx = LocalDatabase.Open();
+        using var cmd = cnx.CreateCommand();
+        cmd.CommandText = "SELECT AreaId, MapId, CenterX, CenterY, MinX, MaxX, MinY, MaxY FROM DbcZone";
+        using var rd = cmd.ExecuteReader();
+        while (rd.Read())
+        {
+            _zoneRects.Add(new ZoneRect(
+                rd.GetInt32(0), rd.GetInt32(1),
+                (float)rd.GetDouble(2), (float)rd.GetDouble(3),
+                (float)rd.GetDouble(4), (float)rd.GetDouble(5),
+                (float)rd.GetDouble(6), (float)rd.GetDouble(7)));
+        }
+        return _zoneRects;
+    }
+
+    public ZoneRect? ZoneCenter(int areaId) => ZoneRects().FirstOrDefault(z => z.AreaId == areaId);
+
+    /// <summary>
+    /// Zone déduite d'une position. Indispensable ici : characters.zone n'est écrite qu'à
+    /// la déconnexion, et vaut zéro pour la quasi-totalité des personnages d'un serveur
+    /// peuplé de bots. La position, elle, est toujours juste.
+    ///
+    /// Les zones s'emboîtent — une ville dans une région —, donc la plus petite l'emporte.
+    /// </summary>
+    public ZoneRect? ZoneAt(int mapId, float x, float y) =>
+        ZoneRects()
+            .Where(z => z.MapId == mapId && z.Contains(x, y))
+            .OrderBy(z => z.Area)
+            .FirstOrDefault();
 
     public string? IconName(int displayId) => Icons().GetValueOrDefault(displayId);
 

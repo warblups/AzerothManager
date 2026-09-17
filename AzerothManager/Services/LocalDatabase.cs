@@ -108,7 +108,11 @@ public static class LocalDatabase
                 AreaId  INTEGER PRIMARY KEY,
                 MapId   INTEGER NOT NULL,
                 CenterX REAL NOT NULL,
-                CenterY REAL NOT NULL
+                CenterY REAL NOT NULL,
+                MinX    REAL NOT NULL DEFAULT 0,
+                MaxX    REAL NOT NULL DEFAULT 0,
+                MinY    REAL NOT NULL DEFAULT 0,
+                MaxY    REAL NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS DbcMap (
@@ -164,6 +168,35 @@ public static class LocalDatabase
             ("SoapPassword", "TEXT NOT NULL DEFAULT ''"),
             ("SoapThroughSshTunnel", "INTEGER NOT NULL DEFAULT 1")
         ];
+
+        // DbcZone a gagné ses bornes après coup : la recréer est plus simple qu'une
+        // migration de colonnes, son contenu étant reconstruit à chaque import.
+        using (var info = cnx.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(DbcZone)";
+            var columns = new List<string>();
+            using (var rd = info.ExecuteReader())
+                while (rd.Read()) columns.Add(rd.GetString(1));
+
+            if (columns.Count > 0 && !columns.Contains("MinX"))
+            {
+                using var drop = cnx.CreateCommand();
+                drop.CommandText = """
+                    DROP TABLE DbcZone;
+                    CREATE TABLE DbcZone (
+                        AreaId  INTEGER PRIMARY KEY,
+                        MapId   INTEGER NOT NULL,
+                        CenterX REAL NOT NULL,
+                        CenterY REAL NOT NULL,
+                        MinX    REAL NOT NULL DEFAULT 0,
+                        MaxX    REAL NOT NULL DEFAULT 0,
+                        MinY    REAL NOT NULL DEFAULT 0,
+                        MaxY    REAL NOT NULL DEFAULT 0
+                    );
+                    """;
+                drop.ExecuteNonQuery();
+            }
+        }
 
         foreach (var (column, definition) in additions)
         {
