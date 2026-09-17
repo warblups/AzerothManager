@@ -162,9 +162,9 @@
                 <TextBlock Text="Mot de passe du compte" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding SoapPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
                 <CheckBox IsChecked="{Binding SoapThroughSshTunnel}"
-                          Content="Passer par un tunnel SSH — exige SOAP.IP = 127.0.0.1 sur le serveur" />
+                          Content="Passer par un tunnel SSH" />
                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                           Text="Décocher si SOAP écoute sur l'IP du serveur : la connexion est alors directe. Le tunnel reste indispensable dès que le serveur est accessible depuis l'extérieur, l'authentification SOAP circulant en clair." />
+                           Text="Le tunnel essaie la boucle locale puis l'adresse du serveur, quelle que soit la valeur de SOAP.IP. Il reste indispensable dès que le serveur est accessible depuis l'extérieur, l'authentification SOAP circulant en clair." />
 
                 <TextBlock Text="Chemins sur le serveur" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Racine du serveur" Style="{StaticResource Caption}" />

@@ -69,8 +69,7 @@ public sealed class GmCommandService
         ForwardedPortLocal? tunnel = null;
         try
         {
-            string host = p.Host;
-            int port = p.SoapPort;
+            string output;
 
             if (p.SoapThroughSshTunnel && p.UsesSsh)
             {
@@ -79,16 +78,16 @@ public sealed class GmCommandService
                 { Timeout = TimeSpan.FromSeconds(8) });
                 ssh.Connect();
 
-                // Port local 0 : le système en choisit un libre.
-                tunnel = new ForwardedPortLocal("127.0.0.1", 0, "127.0.0.1", (uint)p.SoapPort);
-                ssh.AddForwardedPort(tunnel);
-                tunnel.Start();
-
-                host = "127.0.0.1";
-                port = (int)tunnel.BoundPort;
+                // SOAP.IP décide de l'adresse d'écoute côté serveur : la boucle locale si
+                // la valeur par défaut est conservée, l'adresse du serveur si elle a été
+                // changée. On tente les deux plutôt que d'imposer une configuration.
+                output = await ThroughTunnelAsync(ssh, p, command, t => tunnel = t, ct);
+            }
+            else
+            {
+                output = await PostAsync(p.Host, p.SoapPort, p.SoapUser, p.SoapPassword, command, ct);
             }
 
-            var output = await PostAsync(host, port, p.SoapUser, p.SoapPassword, command, ct);
             sw.Stop();
 
             LocalDatabase.LogHistory(p.Id, "gm", "." + command, output);
@@ -106,6 +105,53 @@ public sealed class GmCommandService
             try { tunnel?.Stop(); tunnel?.Dispose(); } catch { /* tunnel déjà fermé */ }
             try { ssh?.Disconnect(); ssh?.Dispose(); } catch { /* session déjà fermée */ }
         }
+    }
+
+    /// <summary>
+    /// Ouvre un tunnel vers l'adresse d'écoute de SOAP et exécute la commande.
+    ///
+    /// L'adresse dépend de SOAP.IP côté serveur : la boucle locale avec la valeur par
+    /// défaut, l'adresse du serveur si elle a été ouverte. Les deux sont tentées, la
+    /// boucle locale d'abord puisque c'est la configuration recommandée. Un échec sur
+    /// les deux remonte le message de la seconde tentative, en nommant ce qui a été tenté.
+    /// </summary>
+    private static async Task<string> ThroughTunnelAsync(
+        SshClient ssh, ServerProfile p, string command,
+        Action<ForwardedPortLocal> keep, CancellationToken ct)
+    {
+        string[] targets = ["127.0.0.1", p.Host];
+        Exception? last = null;
+
+        foreach (var target in targets)
+        {
+            ForwardedPortLocal? tunnel = null;
+            try
+            {
+                // Port local 0 : le système en choisit un libre.
+                tunnel = new ForwardedPortLocal("127.0.0.1", 0, target, (uint)p.SoapPort);
+                ssh.AddForwardedPort(tunnel);
+                tunnel.Start();
+                keep(tunnel);
+
+                return await PostAsync("127.0.0.1", (int)tunnel.BoundPort,
+                                       p.SoapUser, p.SoapPassword, command, ct);
+            }
+            catch (InvalidOperationException)
+            {
+                // Authentification refusée : réessayer sur une autre adresse n'y changerait rien.
+                throw;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                try { tunnel?.Stop(); tunnel?.Dispose(); } catch { /* déjà fermé */ }
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"SOAP injoignable à travers le tunnel, ni sur 127.0.0.1:{p.SoapPort} ni sur " +
+            $"{p.Host}:{p.SoapPort} vus depuis le serveur. Vérifiez SOAP.Enabled et SOAP.IP " +
+            $"dans worldserver.conf. ({last?.Message})");
     }
 
     /// <summary>Test de bout en bout : « server info » renvoie la version et l'uptime.</summary>
