@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets** (icônes et noms de sorts issus des DBC) et **Comptes**. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets** (icônes et noms de sorts issus des DBC), **Comptes** et **Courrier en jeu**. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : Courrier en jeu, puis Armurerie (la brique DBC est déjà là).
+**Prochaine étape** : Armurerie (la brique DBC est déjà là).
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -117,6 +117,18 @@ Vérifié sur les fichiers réels, pas de mémoire :
 - **`spell_dbc` en base ne sert à rien** pour les noms : 4 518 sorts personnalisés seulement, aucun nom localisé.
 
 Le client n'est requis qu'à l'import : tout part dans SQLite (`DbcIcon`, `DbcSpell`, `IconImage`), et l'application est ensuite autonome. Chemin du client dans `Settings` sous `client.path`.
+
+## Courrier — commandes et limites (vérifié aux sources)
+
+Canal imposé : la commande GM. Insérer dans `characters.mail` à la main supposerait de créer les lignes d'`item_instance` des pièces jointes et d'en gérer les identifiants — fragile pour aucun gain.
+
+- `.send mail <joueur> "sujet" "texte"` · `.send items <joueur> "sujet" "texte" id[:qté] …` · `.send money <joueur> "sujet" "texte" <montant>`
+- Sujet et texte sont des `QuotedString` : ils doivent être entre guillemets, et les guillemets internes cassent l'analyse — `MailService.Quote` les neutralise.
+- **`MAX_MAIL_ITEMS = 12`** pièces jointes par courrier.
+- **L'or et les objets ne peuvent pas voyager ensemble** : `.send items` ne prend pas de montant. Joindre les deux provoque **deux courriers**, et l'interface le dit.
+- `.send money` accepte le cuivre brut ou une notation `10g5s`.
+- Aucune commande d'envoi groupé : l'envoi en masse boucle sur les destinataires, une commande chacun.
+- Lecture par SQL : `mail` + `mail_items` + jointure `item_instance` sur `item_guid` pour obtenir l'`itemEntry`.
 
 ## Comptes — schéma auth (vérifié sur serveur réel)
 

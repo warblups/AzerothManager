@@ -26,7 +26,8 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(ServerContext context, ServerConfigViewModel serverConfig,
                          GmConsoleViewModel gmConsole, SqlEditorViewModel sqlConsole,
                          ItemCatalogViewModel itemCatalog,
-                         AccountsViewModel accounts)
+                         AccountsViewModel accounts,
+                         MailViewModel mail)
     {
         Context = context;
 
@@ -59,6 +60,15 @@ public partial class MainViewModel : ObservableObject
 
         Items.Add(new NavigationItem
         {
+            Icon = "✉",
+            Title = "Courrier en jeu",
+            Version = "v1.0",
+            IsAvailable = true,
+            Content = mail
+        });
+
+        Items.Add(new NavigationItem
+        {
             Icon = "🎒",
             Title = "Catalogue d'objets",
             Version = "v1.0",
@@ -80,7 +90,6 @@ public partial class MainViewModel : ObservableObject
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
             ("🧙", "Personnages", "v1.0"),
-            ("✉", "Courrier en jeu", "v1.0"),
             ("🛡", "Modération", "v1.0"),
             ("🎫", "Tickets GM", "v1.1"),
             ("🌀", "Téléportation", "v1.1"),

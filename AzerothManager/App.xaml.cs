@@ -53,6 +53,7 @@ public partial class App : Application
         var sqlEditor = new SqlEditorService(context, mySql);
         var itemCatalog = new ItemCatalogService(mySql);
         var accountService = new AccountService(mySql, gm, context);
+        var mailService = new MailService(gm, mySql);
         var gameClient = new GameClientService();
         GameClientService.Current = gameClient;
 
@@ -67,7 +68,12 @@ public partial class App : Application
         var sqlConsole = new SqlEditorViewModel(sqlEditor, gm, context);
         var catalog = new ItemCatalogViewModel(itemCatalog, context, gameClient);
         var accounts = new AccountsViewModel(accountService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts);
+
+        // Le sélecteur d'objets reçoit sa propre instance de catalogue, pour que la
+        // recherche du module ne soit pas écrasée par celle d'une boîte de dialogue.
+        var mail = new MailViewModel(mailService, context,
+            () => new ItemCatalogViewModel(itemCatalog, context, gameClient));
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail);
 
         new MainWindow { DataContext = main }.Show();
     }

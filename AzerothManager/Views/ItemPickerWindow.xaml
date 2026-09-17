@@ -1,0 +1,33 @@
+<Window x:Class="AzerothManager.Views.ItemPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Choisir un objet" Height="620" Width="1120"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+
+    <!-- Le catalogue est hébergé tel quel : c'est le sélecteur réutilisable du §19,
+         pas une seconde implémentation de la recherche. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ContentControl Grid.Row="0" Content="{Binding}" />
+
+        <Border Grid.Row="1" Background="{StaticResource Panel}" Padding="12,8"
+                BorderBrush="{StaticResource BorderB}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Text="Quantité" Style="{StaticResource Caption}" Margin="0,0,6,0" />
+                    <TextBox x:Name="QuantityBox" Text="1" Width="60" Margin="0,0,10,0" />
+                    <Button Content="✅  Choisir" Style="{StaticResource SuccessButton}" Click="OnConfirm"
+                            IsDefault="True" />
+                    <Button Content="Annuler" Click="OnCancel" IsCancel="True" Margin="0" />
+                </StackPanel>
+                <TextBlock Text="{Binding Selected.Name, FallbackValue='Aucun objet sélectionné'}"
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

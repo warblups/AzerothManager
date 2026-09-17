@@ -30,6 +30,9 @@
             <DataTemplate DataType="{x:Type vm:AccountsViewModel}">
                 <views:AccountsView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MailViewModel}">
+                <views:MailView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
