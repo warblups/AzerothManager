@@ -6,7 +6,7 @@ using Serilog;
 
 namespace AzerothManager.Services;
 
-public sealed record ImportResult(int Icons, int Spells, int Maps, int Areas, string Message);
+public sealed record ImportResult(int Icons, int Spells, int Maps, int Areas, int Zones, string Message);
 
 /// <summary>
 /// Icônes d'objets et noms de sorts, issus des DBC du client 3.3.5a.
@@ -38,6 +38,7 @@ public sealed class GameClientService
     private Dictionary<int, string>? _spells;
     private Dictionary<int, string>? _maps;
     private Dictionary<int, string>? _areas;
+    private Dictionary<int, (int MapId, float X, float Y)>? _zones;
     private readonly Dictionary<int, ImageSource?> _imageCache = [];
 
     /// <summary>
@@ -69,12 +70,13 @@ public sealed class GameClientService
     public ImportResult Import()
     {
         if (!ClientHasDbc)
-            return new ImportResult(0, 0, 0, 0, "ItemDisplayInfo.dbc introuvable dans le dossier indiqué.");
+            return new ImportResult(0, 0, 0, 0, 0, "ItemDisplayInfo.dbc introuvable dans le dossier indiqué.");
 
         var icons = 0;
         var spells = 0;
         var maps = 0;
         var areas = 0;
+        var zones = 0;
 
         using var cnx = LocalDatabase.Open();
         using var tx = cnx.BeginTransaction();
@@ -123,6 +125,7 @@ public sealed class GameClientService
 
         maps = ImportNames(cnx, tx, "Map.dbc", MapNameFirstField, "DbcMap", "MapId");
         areas = ImportNames(cnx, tx, "AreaTable.dbc", AreaNameFirstField, "DbcArea", "AreaId");
+        zones = ImportZones(cnx, tx);
 
         tx.Commit();
 
@@ -130,12 +133,66 @@ public sealed class GameClientService
         _spells = null;
         _maps = null;
         _areas = null;
+        _zones = null;
         _imageCache.Clear();
 
-        Log.Information("Import DBC : {Icons} icônes, {Spells} sorts, {Maps} cartes, {Areas} zones",
-            icons, spells, maps, areas);
-        return new ImportResult(icons, spells, maps, areas,
-            $"{icons} icônes, {spells} sorts, {maps} cartes et {areas} zones importés.");
+        Log.Information("Import DBC : {Icons} icônes, {Spells} sorts, {Maps} cartes, {Areas} zones, {Rects} rectangles",
+            icons, spells, maps, areas, zones);
+        return new ImportResult(icons, spells, maps, areas, zones,
+            $"{icons} icônes, {spells} sorts, {maps} cartes, {areas} zones et {zones} rectangles importés.");
+    }
+
+    /// <summary>
+    /// Rectangles de WorldMapArea.dbc, réduits au centre de chaque zone. Sert à placer
+    /// une bulle de population, et fournira le point de chute d'une téléportation.
+    ///
+    /// Attention au sens des bornes : les champs 4 et 5 encadrent position_y, les champs
+    /// 6 et 7 encadrent position_x — l'inverse de ce que « Left » et « Top » suggèrent.
+    /// Les lignes dont areaID vaut zéro décrivent le continent entier et sont écartées.
+    /// </summary>
+    private int ImportZones(SqliteConnection cnx, SqliteTransaction tx)
+    {
+        var path = Path.Combine(DbcPath, "WorldMapArea.dbc");
+        if (!File.Exists(path)) return 0;
+
+        var count = 0;
+        try
+        {
+            using var cmd = cnx.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = "INSERT INTO DbcZone (AreaId, MapId, CenterX, CenterY) " +
+                              "VALUES ($a, $m, $x, $y) ON CONFLICT(AreaId) DO UPDATE SET " +
+                              "MapId = $m, CenterX = $x, CenterY = $y";
+            var pa = cmd.Parameters.Add("$a", SqliteType.Integer);
+            var pm = cmd.Parameters.Add("$m", SqliteType.Integer);
+            var px = cmd.Parameters.Add("$x", SqliteType.Real);
+            var py = cmd.Parameters.Add("$y", SqliteType.Real);
+
+            var dbc = new DbcReader(path);
+            for (var row = 0; row < dbc.RecordCount; row++)
+            {
+                var areaId = dbc.GetInt(row, 2);
+                if (areaId == 0) continue;
+
+                var yHigh = dbc.GetFloat(row, 4);
+                var yLow = dbc.GetFloat(row, 5);
+                var xHigh = dbc.GetFloat(row, 6);
+                var xLow = dbc.GetFloat(row, 7);
+                if (yHigh == yLow || xHigh == xLow) continue;
+
+                pa.Value = areaId;
+                pm.Value = dbc.GetInt(row, 1);
+                px.Value = (xHigh + xLow) / 2.0;
+                py.Value = (yHigh + yLow) / 2.0;
+                cmd.ExecuteNonQuery();
+                count++;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Lecture de WorldMapArea.dbc impossible");
+        }
+        return count;
     }
 
     /// <summary>Import générique d'un DBC identifiant -> nom localisé.</summary>
@@ -243,6 +300,22 @@ public sealed class GameClientService
 
     public string AreaName(int areaId) =>
         (_areas ??= Names("DbcArea", "AreaId")).GetValueOrDefault(areaId, areaId == 0 ? "—" : $"zone {areaId}");
+
+    /// <summary>Centre d'une zone en coordonnées monde, si le client en a fourni le rectangle.</summary>
+    public (int MapId, float X, float Y)? ZoneCenter(int areaId)
+    {
+        if (_zones is null)
+        {
+            _zones = [];
+            using var cnx = LocalDatabase.Open();
+            using var cmd = cnx.CreateCommand();
+            cmd.CommandText = "SELECT AreaId, MapId, CenterX, CenterY FROM DbcZone";
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+                _zones[rd.GetInt32(0)] = (rd.GetInt32(1), (float)rd.GetDouble(2), (float)rd.GetDouble(3));
+        }
+        return _zones.TryGetValue(areaId, out var z) ? z : null;
+    }
 
     public string? IconName(int displayId) => Icons().GetValueOrDefault(displayId);
 

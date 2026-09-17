@@ -70,4 +70,48 @@ public sealed class PlayerMapService
 
         return (placed, elsewhere);
     }
+
+    /// <summary>
+    /// Effectifs par zone, tous continents confondus. La bulle est placée au centre de la
+    /// zone lu dans WorldMapArea.dbc ; une zone sans rectangle reste dans la liste mais
+    /// n'est pas projetée.
+    /// </summary>
+    public async Task<IReadOnlyList<ZonePopulation>> ZonePopulationAsync(
+        bool includeOffline = false, CancellationToken ct = default)
+    {
+        var list = new List<ZonePopulation>();
+
+        await using var cnx = await _mySql.OpenAsync(MySqlService.Db.Characters, ct);
+        await using var cmd = cnx.CreateCommand();
+        // Les races 1, 3, 4, 7 et 11 sont l'Alliance ; les autres la Horde.
+        cmd.CommandText = $"""
+            SELECT zone, map,
+                   SUM(race IN (1,3,4,7,11)) AS alliance,
+                   SUM(race NOT IN (1,3,4,7,11)) AS horde
+            FROM characters
+            WHERE deleteDate IS NULL {(includeOffline ? "" : "AND online = 1")}
+            GROUP BY zone, map
+            ORDER BY (alliance + horde) DESC
+            """;
+
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct))
+        {
+            var zoneId = rd.GetInt32(0);
+            var mapId = rd.GetInt32(1);
+            var alliance = rd.GetInt32(2);
+            var horde = rd.GetInt32(3);
+
+            double x = 0, y = 0;
+            var center = _client.ZoneCenter(zoneId);
+            if (center is { } c && Continent.ForMap(c.MapId) is { } continent)
+            {
+                (x, y) = continent.Project(c.X, c.Y);
+                mapId = c.MapId;
+            }
+
+            list.Add(new ZonePopulation(zoneId, _client.AreaName(zoneId), mapId, alliance, horde, x, y));
+        }
+        return list;
+    }
 }

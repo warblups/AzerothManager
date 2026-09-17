@@ -6,7 +6,7 @@
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="{Binding PanelWidth}" />
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Column="0" Margin="0,0,10,0">
@@ -17,10 +17,15 @@
             </Grid.RowDefinitions>
 
             <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Content="{Binding PanelToggleLabel}" Margin="8,0,0,0"
+                        Command="{Binding TogglePanelCommand}" />
                 <Button DockPanel.Dock="Right" Content="🔄  Actualiser" Style="{StaticResource SuccessButton}"
                         Command="{Binding LoadCommand}" Margin="8,0,0,0" />
                 <CheckBox DockPanel.Dock="Right" Content="Inclure les déconnectés"
                           IsChecked="{Binding IncludeOffline}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <CheckBox DockPanel.Dock="Right" Content="Effectifs par zone"
+                          IsChecked="{Binding ShowZones}" VerticalAlignment="Center" Margin="8,0,0,0"
+                          ToolTip="Décoché, chaque joueur est une pastille. Coché, chaque zone porte ses effectifs Alliance et Horde." />
                 <ComboBox Width="200" HorizontalAlignment="Left" Margin="0"
                           ItemsSource="{Binding Continents}" SelectedItem="{Binding Continent}">
                     <ComboBox.ItemTemplate>
@@ -30,7 +35,7 @@
             </DockPanel>
 
             <!-- La carte et les marqueurs partagent le même repère : le Viewbox les
-                 met à l'échelle ensemble, donc les pastilles restent alignées. -->
+                 met à l'échelle ensemble, donc tout reste aligné. -->
             <Border Grid.Row="1" BorderBrush="{StaticResource BorderB}" BorderThickness="1"
                     Background="{StaticResource InputBg}" CornerRadius="4">
                 <Grid>
@@ -39,8 +44,10 @@
                             <Image Source="{Binding MapImage}"
                                    Width="{Binding MapWidth}" Height="{Binding MapHeight}" />
 
+                            <!-- Un point par joueur -->
                             <ItemsControl ItemsSource="{Binding Markers}"
-                                          Width="{Binding MapWidth}" Height="{Binding MapHeight}">
+                                          Width="{Binding MapWidth}" Height="{Binding MapHeight}"
+                                          Visibility="{Binding ShowPlayers, Converter={StaticResource BoolToVis}}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -65,6 +72,47 @@
                                                 </Style>
                                             </Ellipse.Style>
                                         </Ellipse>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Une bulle par zone peuplée : Alliance · Horde -->
+                            <ItemsControl ItemsSource="{Binding ZoneBubbles}"
+                                          Width="{Binding MapWidth}" Height="{Binding MapHeight}"
+                                          Visibility="{Binding ShowZones, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding MarkerX}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding MarkerY}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="{Binding Size}" Height="{Binding Size}"
+                                                CornerRadius="999" BorderThickness="2"
+                                                ToolTip="{Binding Tooltip}" Opacity="0.93">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#DD7A1420" />
+                                                    <Setter Property="BorderBrush" Value="#FFE03030" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AllianceMajority}" Value="True">
+                                                            <Setter Property="Background" Value="#DD11315E" />
+                                                            <Setter Property="BorderBrush" Value="#FF3080E0" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       FontWeight="Bold" FontSize="11">
+                                                <Run Text="{Binding Alliance, Mode=OneWay}" Foreground="#FF9BC9FF" />
+                                                <Run Text="·" Foreground="#FFBBBBBB" />
+                                                <Run Text="{Binding Horde, Mode=OneWay}" Foreground="#FFFFA0A0" />
+                                            </TextBlock>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -94,25 +142,26 @@
                        TextWrapping="Wrap" Margin="0,8,0,0" />
         </Grid>
 
-        <!-- Joueurs du continent, et ceux qu'on ne peut pas placer -->
+        <!-- Toutes les zones peuplées, et les joueurs non projetables -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="160" />
+                <RowDefinition Height="150" />
             </Grid.RowDefinitions>
 
             <DockPanel Grid.Row="0">
-                <TextBlock DockPanel.Dock="Top" Text="Sur ce continent" Style="{StaticResource SectionTitle}"
-                           Margin="0,0,0,4" />
+                <TextBlock DockPanel.Dock="Top" Text="Toutes les zones peuplées"
+                           Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
                 <Border BorderBrush="{StaticResource BorderB}" BorderThickness="1">
-                    <DataGrid ItemsSource="{Binding Markers}" IsReadOnly="True"
+                    <DataGrid ItemsSource="{Binding AllZones}" IsReadOnly="True"
                               AutoGenerateColumns="False" SelectionMode="Single"
                               HeadersVisibility="Column">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" />
-                            <DataGridTextColumn Header="Niv" Binding="{Binding Level}" Width="40" />
-                            <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="120" />
+                            <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="*" />
+                            <DataGridTextColumn Header="All." Binding="{Binding Alliance}" Width="42" />
+                            <DataGridTextColumn Header="Hor." Binding="{Binding Horde}" Width="42" />
+                            <DataGridTextColumn Header="Tot." Binding="{Binding Total}" Width="42" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
@@ -126,7 +175,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" />
                         <DataGridTextColumn Header="Carte" Binding="{Binding MapId}" Width="50" />
-                        <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="110" />
+                        <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="100" />
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

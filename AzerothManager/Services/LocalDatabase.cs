@@ -102,6 +102,15 @@ public static class LocalDatabase
                 Name    TEXT NOT NULL
             );
 
+            -- Centre de chaque zone en coordonnées monde, pour la carte et, plus tard,
+            -- la téléportation vers une zone.
+            CREATE TABLE IF NOT EXISTS DbcZone (
+                AreaId  INTEGER PRIMARY KEY,
+                MapId   INTEGER NOT NULL,
+                CenterX REAL NOT NULL,
+                CenterY REAL NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS DbcMap (
                 MapId INTEGER PRIMARY KEY,
                 Name  TEXT NOT NULL

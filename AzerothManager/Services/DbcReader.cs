@@ -46,6 +46,12 @@ public sealed class DbcReader
 
     public int GetInt(int row, int field) => unchecked((int)GetUInt(row, field));
 
+    public float GetFloat(int row, int field)
+    {
+        if ((uint)row >= (uint)RecordCount || (uint)field >= (uint)FieldCount) return 0;
+        return BitConverter.ToSingle(_data, _recordsOffset + row * RecordSize + field * 4);
+    }
+
     /// <summary>Chaîne référencée par un champ. Un décalage nul ou hors bloc rend une chaîne vide.</summary>
     public string GetString(int row, int field)
     {
