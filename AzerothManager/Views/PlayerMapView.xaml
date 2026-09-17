@@ -65,7 +65,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Ellipse Width="10" Height="10" StrokeThickness="1.5"
-                                                 Stroke="#FF101018" ToolTip="{Binding Tooltip}">
+                                                 Stroke="#FF101018" ToolTip="{Binding Tooltip}" ToolTipService.ShowDuration="20000">
                                             <Ellipse.Style>
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Fill" Value="#FFE03030" />
@@ -98,7 +98,7 @@
                                     <DataTemplate>
                                         <Border Width="{Binding Size}" Height="{Binding Size}"
                                                 CornerRadius="999" BorderThickness="2"
-                                                ToolTip="{Binding Tooltip}" Opacity="0.93">
+                                                ToolTip="{Binding Tooltip}" ToolTipService.ShowDuration="20000" Opacity="0.93">
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="Background" Value="#DD7A1420" />
@@ -162,7 +162,7 @@
                                                             <DataTemplate>
                                                                 <Border Width="{Binding Size}" Height="{Binding Size}"
                                                                         CornerRadius="999" BorderThickness="2"
-                                                                        ToolTip="{Binding Tooltip}" Opacity="0.93">
+                                                                        ToolTip="{Binding Tooltip}" ToolTipService.ShowDuration="20000" Opacity="0.93">
                                                                     <Border.Style>
                                                                         <Style TargetType="Border">
                                                                             <Setter Property="Background" Value="#DD7A1420" />

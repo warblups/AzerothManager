@@ -253,6 +253,32 @@
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <!--
+        Les infobulles aussi arrivent avec le chrome clair du système : fond jaune pâle et
+        texte noir, illisibles ici. Gabarit complet, et durée d'affichage rallongée — les
+        infobulles de la carte portent plusieurs lignes d'information.
+    -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Foreground" Value="{StaticResource Text}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Placement" Value="MousePoint" />
+        <Setter Property="HorizontalOffset" Value="12" />
+        <Setter Property="VerticalOffset" Value="12" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{StaticResource Surface}"
+                            BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                            CornerRadius="4" Padding="9,6">
+                        <ContentPresenter TextElement.Foreground="{StaticResource Text}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Listes -->
     <Style TargetType="ListBox">
         <Setter Property="Background" Value="{StaticResource Surface}" />
