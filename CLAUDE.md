@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages** et **Modération**. **Le socle v1.0 est complet.** Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation** et **Édition du monde**. **Le socle v1.0 est complet.** Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : v1.1 — téléportation dédiée, métiers et sorts, modification en direct. Puis v1.2, l'édition du monde. Une carte des joueurs connectés est envisagée — voir la note plus bas.
+**Prochaine étape** : le module **Logs** (v1.2, lecture d'`Auth.log` et `Server.log` par SFTP avec filtrage), seul module restant du rail. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -115,6 +115,8 @@ Cette méthode a évité plusieurs erreurs réelles : `StatsCount` n'existe pas 
 
 Conséquence pratique : fermer l'application avant tout `dotnet build`, l'exécutable étant verrouillé.
 
+Pour seulement **vérifier que le code compile** sans demander la fermeture de l'application, copier le projet (sans `bin/` ni `obj/`) dans un dossier temporaire et y lancer `dotnet build`. Rediriger `BaseOutputPath`/`BaseIntermediateOutputPath` **ne marche pas** : WPF génère alors les `*.g.cs` dans les deux `obj` et le compilateur voit chaque `InitializeComponent` en double (443 erreurs `CS0111`/`CS0102`). La copie complète, elle, compile proprement.
+
 ## Canal d'exécution : console GM ou SQL (CdC §5)
 
 Règle structurante — chaque fonction passe par une commande GM, par du SQL, ou par les deux, et le choix découle du besoin, pas de la commodité d'implémentation :
@@ -203,7 +205,9 @@ Commandes qui, elles, acceptent un nom : `.character level|rename|customize|chan
 
 Les services de personnage posent un **drapeau** dans `characters.at_login` : l'effet n'a lieu qu'à la prochaine connexion. Le module décode le masque pour montrer ce qui est en attente.
 
-`world.game_tele` contient 1 989 destinations sur le serveur de référence — c'est la bibliothèque du module Téléportation à venir.
+`world.game_tele` contient 1 989 destinations sur le serveur de référence — c'est la bibliothèque du module Téléportation.
+
+Cette table **ne porte pas de zone**, seulement `map` et les coordonnées. Le nom de zone français affiché est donc déduit de la position par `GameClientService.ZoneAt`, le même mécanisme que la carte des joueurs et l'édition du monde. Il exige que les DBC aient été importés : sans `DbcZone`, la colonne affiche « — » au lieu de mentir.
 
 ## Courrier — commandes et limites (vérifié aux sources)
 
@@ -268,6 +272,26 @@ Majoritairement des commandes GM, donc un personnage GM connecté est requis. L'
 - **Métiers et sorts** — `.learn all recipes <métier>`, `.maxskill`. Motif de support récurrent (perte de recettes).
 - **Modification en direct**, **familiers**, **apparence/auras**, **mode GM et cheats** — voir §11.
 - **`.list item`** — retrouve les détenteurs d'un objet ; c'est ce qui rend l'enquête sur une duplication actionnable, à rattacher au module économie.
+
+## Ce que SOAP ne peut pas faire — le recensement Console::No
+
+Toutes les commandes GM ne sont pas exécutables à distance. `Console::No` signifie que la commande a besoin d'une **session de jeu** : elle relève la position ou la cible du personnage qui l'exécute. SOAP n'en a aucune, donc elle échoue — il ne faut pas livrer le bouton.
+
+Sont ainsi hors de portée, et il est inutile de réessayer : `.npc add`, `.npc move`, `.npc set *`, `.wp add|modify|show`, `.gobject add|move|turn`, `.learn all recipes`, `.maxskill`, `.modify *` (dont `.modify money`), `.account password`, `.go *`, `.appear`, `.summon` côté maître de jeu. En conséquence, **« Métiers et sorts » et « Modification en direct » du §11 n'ont pas d'implémentation possible par ce canal** ; le dire est plus utile que de livrer une interface qui renvoie une erreur.
+
+Le canal de repli est le SQL, et c'est ce que fait le module Édition du monde.
+
+## Édition du monde — spawns en SQL (CdC §10)
+
+`WorldEditService` couvre `world.creature` (155 085 lignes) et `world.gameobject` (97 426) dans un éditeur unique : les deux tables partagent `guid`, `id`, `map`, `position_*`, `orientation`, `spawntimesecs` et `Comment`. Recherche par nom, par identifiant de modèle ou par guid, filtre par carte, pagination côté SQL. Les noms français viennent de `creature_template_locale` / `gameobject_template_locale`, locale **`frFR`** (8 locales présentes, la colonne s'appelle `Name` pour les créatures et `name` pour les objets).
+
+Trois points vérifiés sur le serveur réel, à ne pas redécouvrir :
+
+- **`zoneId` et `areaId` de ces tables ne sont pas fiables** : `zoneId = 0` pour 149 887 des 155 085 lignes de `creature` et 58 415 des 97 426 de `gameobject`. Ce sont des caches remplis au besoin par le serveur, pas des données de placement. La zone est **déduite de la position** via `GameClientService.ZoneAt` — exactement comme dans la carte des joueurs et la bibliothèque de téléportation. Même mécanisme, trois modules : ne pas le réécrire.
+- **Il n'existe ni `.reload creature` ni `.reload gameobject`.** `cs_reload.cpp` recharge les *modèles* (`creature_template`, `creature_text`, `gameobject_template_locale`, `spawn_group`…), jamais les *spawns*. La règle « écriture dans `world` → proposer le `.reload` » du §9 **ne s'applique donc pas ici** : une position ou un temps de réapparition modifié ne prend effet qu'au redémarrage du worldserver. Le module l'annonce au lieu d'offrir un `.reload` inerte.
+- **Les tables satellites ne nomment pas toutes leur colonne `guid`.** À la suppression d'un spawn, une ligne orpheline provoque une erreur au chargement du monde, d'où le nettoyage en transaction : `creature_addon`(guid), `creature_formations`(**leaderGUID**, **memberGUID**), `game_event_creature`(guid), `pool_creature`(guid) ; `gameobject_addon`(guid), `game_event_gameobject`(guid), `pool_gameobject`(guid). Cas particulier de **`linked_respawn`** : ses colonnes `guid`/`linkedGuid` portent un guid de créature **ou** de gameobject selon `linkType` (0 créature→créature, 1 créature→objet, 2 objet→objet, 3 objet→créature). Les deux espaces de guid étant indépendants, filtrer sans le `linkType` supprimerait le lien d'une créature qui porte le même numéro. Chaque table est testée dans `information_schema` avant usage : elle peut manquer selon les modules installés.
+
+Le guid et l'identifiant de modèle ne sont pas modifiables : changer l'un revient à créer un autre spawn, changer l'autre à en faire une créature différente. Le placement, lui, reste impossible — voir la section précédente.
 
 ## Licence et référence externe (CdC §4)
 

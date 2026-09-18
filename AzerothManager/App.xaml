@@ -54,6 +54,9 @@
             <DataTemplate DataType="{x:Type vm:TeleportViewModel}">
                 <views:TeleportView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:WorldEditViewModel}">
+                <views:WorldEditView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

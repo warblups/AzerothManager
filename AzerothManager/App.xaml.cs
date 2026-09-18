@@ -62,6 +62,7 @@ public partial class App : Application
         var characterService = new CharacterService(mySql, gm, context, gameClient);
         var moderationService = new ModerationService(mySql, gm, context);
         var teleportService = new TeleportService(mySql, gm, context, gameClient);
+        var worldEditService = new WorldEditService(mySql, context, gameClient);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -86,7 +87,8 @@ public partial class App : Application
         var charactersVm = new CharactersViewModel(characterService, context);
         var moderation = new ModerationViewModel(moderationService, context);
         var teleport = new TeleportViewModel(teleportService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport);
+        var worldEdit = new WorldEditViewModel(worldEditService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit);
 
         new MainWindow { DataContext = main }.Show();
     }

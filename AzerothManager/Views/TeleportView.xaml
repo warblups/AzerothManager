@@ -56,7 +56,8 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60" />
                     <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" MinWidth="160" />
-                    <DataGridTextColumn Header="Carte" Binding="{Binding MapName}" Width="170" />
+                    <DataGridTextColumn Header="Zone" Binding="{Binding ZoneText}" Width="180" />
+                    <DataGridTextColumn Header="Carte" Binding="{Binding MapName}" Width="150" />
                     <DataGridTextColumn Header="Position" Binding="{Binding PositionText}" Width="190" />
                     <DataGridTextColumn Header="Orient." Binding="{Binding OrientationText}" Width="70" />
                 </DataGrid.Columns>

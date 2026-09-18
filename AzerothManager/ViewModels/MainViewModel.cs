@@ -33,7 +33,8 @@ public partial class MainViewModel : ObservableObject
                          PlayerMapViewModel playerMap,
                          CharactersViewModel characters,
                          ModerationViewModel moderation,
-                         TeleportViewModel teleport)
+                         TeleportViewModel teleport,
+                         WorldEditViewModel worldEdit)
     {
         Context = context;
 
@@ -154,11 +155,19 @@ public partial class MainViewModel : ObservableObject
             Content = teleport
         });
 
+        Items.Add(new NavigationItem
+        {
+            Icon = "🗺",
+            Title = "Édition du monde",
+            Version = "v1.2",
+            IsAvailable = true,
+            Content = worldEdit
+        });
+
         // Modules planifiés : affichés dès maintenant pour que l'ordre de construction
         // du cahier des charges (§22) reste lisible dans l'application elle-même.
         foreach (var (icon, title, version) in new (string, string, string)[]
         {
-            ("🗺", "Édition du monde", "v1.2"),
             ("📜", "Logs", "v1.2")
         })
         {

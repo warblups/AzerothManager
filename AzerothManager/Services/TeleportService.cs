@@ -66,9 +66,16 @@ public sealed class TeleportService
         while (await rd.ReadAsync(ct))
         {
             var mapValue = rd.GetInt32(2);
+            var x = rd.GetFloat(3);
+            var y = rd.GetFloat(4);
+
+            // La zone se déduit de la position : game_tele ne la stocke pas.
+            var zone = _client.ZoneAt(mapValue, x, y);
+
             list.Add(new TeleportPoint(
                 rd.GetInt32(0), rd.GetString(1), mapValue, _client.MapName(mapValue),
-                rd.GetFloat(3), rd.GetFloat(4), rd.GetFloat(5), rd.GetFloat(6)));
+                x, y, rd.GetFloat(5), rd.GetFloat(6),
+                zone is null ? "" : _client.AreaName(zone.AreaId)));
         }
         return list;
     }

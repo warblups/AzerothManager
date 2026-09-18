@@ -79,8 +79,15 @@ public sealed record NamedMap(int MapId, string Name, int Count)
 /// </summary>
 public sealed record TeleportPoint(
     int Id, string Name, int MapId, string MapName,
-    float X, float Y, float Z, float Orientation)
+    float X, float Y, float Z, float Orientation,
+    string ZoneName = "")
 {
     public string PositionText => $"{X:0}, {Y:0}, {Z:0}";
     public string OrientationText => $"{Orientation:0.00}";
+
+    /// <summary>
+    /// game_tele ne porte pas de zone : elle est déduite de la position, via les
+    /// rectangles d'AreaTable — le même mécanisme que la carte des joueurs.
+    /// </summary>
+    public string ZoneText => string.IsNullOrEmpty(ZoneName) ? "—" : ZoneName;
 }
