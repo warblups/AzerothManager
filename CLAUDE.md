@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation** et **Édition du monde**. **Le socle v1.0 est complet.** Le socle v1.0 est complet ; l'armurerie, prévue en v1.1, a été avancée grâce à la brique DBC. Les autres apparaissent dans le rail, désactivés, avec leur version cible.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde** et **Logs**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : le module **Logs** (v1.2, lecture d'`Auth.log` et `Server.log` par SFTP avec filtrage), seul module restant du rail. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **événements de jeu** (`world.game_event` + `.event`), **annonces et arrêt planifié** (`.announce`, `.notify`, `.server shutdown`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **guildes et réputation** (v1.1), puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -292,6 +292,26 @@ Trois points vérifiés sur le serveur réel, à ne pas redécouvrir :
 - **Les tables satellites ne nomment pas toutes leur colonne `guid`.** À la suppression d'un spawn, une ligne orpheline provoque une erreur au chargement du monde, d'où le nettoyage en transaction : `creature_addon`(guid), `creature_formations`(**leaderGUID**, **memberGUID**), `game_event_creature`(guid), `pool_creature`(guid) ; `gameobject_addon`(guid), `game_event_gameobject`(guid), `pool_gameobject`(guid). Cas particulier de **`linked_respawn`** : ses colonnes `guid`/`linkedGuid` portent un guid de créature **ou** de gameobject selon `linkType` (0 créature→créature, 1 créature→objet, 2 objet→objet, 3 objet→créature). Les deux espaces de guid étant indépendants, filtrer sans le `linkType` supprimerait le lien d'une créature qui porte le même numéro. Chaque table est testée dans `information_schema` avant usage : elle peut manquer selon les modules installés.
 
 Le guid et l'identifiant de modèle ne sont pas modifiables : changer l'un revient à créer un autre spawn, changer l'autre à en faire une créature différente. Le placement, lui, reste impossible — voir la section précédente.
+
+## Logs — la moitié qui revient au Manager
+
+Le §3 partage les journaux en deux, et c'est ce partage qui dicte le module : la lecture **en direct** d'`Auth.log` et `Server.log` appartient à l'Updater, qui la fait déjà avec son propre `Platform/LogTail.cs`. Le Manager prend l'autre moitié : **consultation d'une fenêtre + filtrage + corrélation avec les actions administrateur**. D'où l'absence volontaire de rafraîchissement automatique ici — le dupliquer serait réimplémenter l'Updater.
+
+La corrélation est le seul apport qu'un `tail` ne donne pas : `LogService.ReadAdminActions` relit la table `History` locale (SQL, commandes GM, actions) sur l'intervalle du journal chargé et **entrelace les deux par l'horodatage**. Deux conséquences :
+
+- L'historique est horodaté sur le poste, le journal sur le serveur, et les horloges ne sont pas synchronisées à la seconde : l'intervalle est élargi d'**une minute de chaque côté**.
+- Sans horodatage dans les lignes, l'entrelacement n'a aucun sens : `LogReadResult.HasTimestamps` le signale, l'interface désactive la case et explique qu'il manque le drapeau 1 à l'appender. Ne pas inventer un ordre.
+
+Points tranchés, à ne pas redécouvrir :
+
+- **Aucun nom de fichier n'est codé en dur** : le dossier est listé. Selon les appenders un serveur écrit `Server.log` et `Auth.log`, mais aussi `DBErrors.log`, `Errors.log`, des `gm_*.log` — et sous PM2 les `worldserver-error.log` / `worldserver-out.log`, **seuls à contenir un plantage survenu avant l'ouverture de `Server.log`** (c'est exactement le cas « Failed to find map files » du diagnostic SOAP). `/home/<user>/.pm2/logs` est donc un emplacement candidat, construit explicitement : **SFTP n'a pas de shell, donc pas d'expansion de `~`**.
+- **Le listage passe par `SftpClient.ListDirectory`**, pas par un `ls` analysé au texte : taille et date arrivent déjà typées, et la mise en forme de `ls` varie d'une distribution à l'autre.
+- **Seule la fin du fichier est transférée** (`SshService.ReadTailAsync` se positionne par décalage ; en local, `FileShare.ReadWrite` est obligatoire, le serveur garde son journal ouvert). Quand la lecture commence au milieu du fichier, **le premier saut de ligne est la seule frontière sûre** : avant lui on a une ligne tronquée et peut-être un caractère accentué coupé en plein milieu de sa séquence UTF-8.
+- **Le préfixe d'une ligne dépend des drapeaux de l'appender** (1 = horodatage, 2 = niveau, 4 = type de filtre) : les trois parties sont optionnelles, et le format de l'horodatage a varié selon les versions. `LogLineParser` accepte donc plusieurs formes (`_`, espace ou `T` entre date et heure ; `:` ou `-` dans l'heure ; crochets et fractions de seconde facultatifs) **au lieu d'en figer une de mémoire** — le serveur de référence était éteint au moment de l'écriture, et c'est précisément pour ça que l'analyse est isolée dans un fichier sans dépendances, vérifiable seule.
+- **L'héritage de niveau est borné.** Une ligne sans préfixe est la suite d'un message multi-ligne (pile d'appels, bloc SQL) et hérite de l'heure et du niveau de la ligne qui l'a ouverte — sinon elle disparaîtrait au premier filtre. Mais l'héritage n'a lieu **que si un horodatage a déjà été vu** : dans un journal écrit sans préfixe du tout, le niveau de la première ligne contaminerait tout le fichier.
+- Le niveau est cherché **en mot entier** (`\b`), comme dans l'Updater : sinon « information » donne INFO et « warnaccount » donne WARN.
+
+Le filtrage (niveaux, texte) s'applique à la fenêtre déjà lue, **sans relire le fichier** : changer une case ne doit pas relancer un transfert SFTP. La quantité lue est un choix explicite de l'interface (200 Ko / 1 Mo / 4 Mo) et l'en-tête annonce ce qui a réellement été transféré ; l'affichage est plafonné à 5 000 lignes, la fin étant conservée.
 
 ## Licence et référence externe (CdC §4)
 

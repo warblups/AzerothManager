@@ -37,3 +37,33 @@ public sealed class DisplayIdToIconConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// Couleur d'une ligne de journal selon son niveau. Mêmes teintes que l'onglet Logs
+/// d'AzerothUpdater, pour que les deux applications se lisent de la même façon ; une action
+/// de l'administrateur prend l'accent, afin de ressortir au milieu du journal du serveur.
+/// </summary>
+public sealed class LogSeverityToBrushConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var key = value is AzerothManager.Models.LogLine line && line.IsAdmin
+            ? "Accent"
+            : value is AzerothManager.Models.LogLine l
+                ? l.Severity switch
+                  {
+                      AzerothManager.Models.LogSeverity.Error => "Error",
+                      AzerothManager.Models.LogSeverity.Warning => "Warning",
+                      AzerothManager.Models.LogSeverity.Info => "Text",
+                      AzerothManager.Models.LogSeverity.Debug => "Muted",
+                      _ => "Text"
+                  }
+                : "Text";
+
+        return System.Windows.Application.Current?.TryFindResource(key)
+            ?? System.Windows.Media.Brushes.White;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

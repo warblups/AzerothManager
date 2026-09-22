@@ -13,6 +13,7 @@
             <views:NotBoolConverter x:Key="NotBool" />
             <views:QualityToBrushConverter x:Key="QualityToBrush" />
             <views:DisplayIdToIconConverter x:Key="DisplayIdToIcon" />
+            <views:LogSeverityToBrushConverter x:Key="LogSeverityToBrush" />
 
             <!-- Association ViewModel -> Vue -->
             <DataTemplate DataType="{x:Type vm:ServerConfigViewModel}">
@@ -56,6 +57,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:WorldEditViewModel}">
                 <views:WorldEditView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:LogsViewModel}">
+                <views:LogsView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

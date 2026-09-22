@@ -5,6 +5,9 @@ using Renci.SshNet;
 
 namespace AzerothManager.Services;
 
+/// <summary>Fichier distant tel que le listage SFTP le rapporte.</summary>
+public sealed record RemoteFile(string Path, string Name, long Size, DateTime Modified);
+
 /// <summary>
 /// Accès système au serveur : exécution de commandes shell et transfert de fichiers.
 /// Sert la lecture des logs, des .conf et des DBC sur serveur Linux (§14).
@@ -65,6 +68,59 @@ public sealed class SshService
             client.Disconnect();
             LocalDatabase.LogHistory(p.Id, "action", $"ssh: {command}");
             return output;
+        }, ct);
+    }
+
+    /// <summary>
+    /// Contenu d'un dossier distant, lu par SFTP plutôt que par un `ls` analysé au texte :
+    /// la taille et la date arrivent déjà typées, et la mise en forme de `ls` varie d'une
+    /// distribution à l'autre.
+    /// </summary>
+    public async Task<IReadOnlyList<RemoteFile>> ListFilesAsync(string directory, CancellationToken ct = default)
+    {
+        var p = _context.RequireActive();
+        return await Task.Run(() =>
+        {
+            using var client = new SftpClient(BuildConnectionInfo(p));
+            client.Connect();
+            var files = client.ListDirectory(directory)
+                .Where(f => f.IsRegularFile)
+                .Select(f => new RemoteFile(f.FullName, f.Name, f.Length, f.LastWriteTime))
+                .ToList();
+            client.Disconnect();
+            return (IReadOnlyList<RemoteFile>)files;
+        }, ct);
+    }
+
+    /// <summary>
+    /// Fin d'un fichier distant, au plus <paramref name="maxBytes"/> octets.
+    ///
+    /// Un Server.log pèse couramment des dizaines de mégaoctets : on se positionne par
+    /// décalage au lieu de tout télécharger, ce que <see cref="DownloadAsync"/> ferait.
+    /// </summary>
+    public async Task<(byte[] Data, long FileSize)> ReadTailAsync(string remotePath, long maxBytes,
+                                                                  CancellationToken ct = default)
+    {
+        var p = _context.RequireActive();
+        return await Task.Run(() =>
+        {
+            using var client = new SftpClient(BuildConnectionInfo(p));
+            client.Connect();
+            try
+            {
+                var size = client.GetAttributes(remotePath).Size;
+                var start = Math.Max(0, size - maxBytes);
+
+                using var stream = client.OpenRead(remotePath);
+                stream.Seek(start, SeekOrigin.Begin);
+                using var buffer = new MemoryStream();
+                stream.CopyTo(buffer, 64 * 1024);
+                return (buffer.ToArray(), size);
+            }
+            finally
+            {
+                client.Disconnect();
+            }
         }, ct);
     }
 
