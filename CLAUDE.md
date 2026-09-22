@@ -302,12 +302,36 @@ La corrélation est le seul apport qu'un `tail` ne donne pas : `LogService.ReadA
 - L'historique est horodaté sur le poste, le journal sur le serveur, et les horloges ne sont pas synchronisées à la seconde : l'intervalle est élargi d'**une minute de chaque côté**.
 - Sans horodatage dans les lignes, l'entrelacement n'a aucun sens : `LogReadResult.HasTimestamps` le signale, l'interface désactive la case et explique qu'il manque le drapeau 1 à l'appender. Ne pas inventer un ordre.
 
+### Le serveur de référence n'écrit aucun préfixe (vérifié)
+
+Mesuré sur les fichiers réels, et c'est le fait le plus important du module : **les quatre appenders ont leurs drapeaux à 0**.
+
+```
+Appender.Console=1,4,0,"1 9 3 6 5 8"        Appender.Console=1,5,0,…   (authserver)
+Appender.Server=2,5,0,Server.log,w          Appender.Auth=2,5,0,Auth.log,w
+Appender.Playerbots=2,5,0,Playerbots.log,w
+Appender.Errors=2,2,0,Errors.log,w
+```
+
+Le troisième champ est le masque de drapeaux : **1 = horodatage, 2 = niveau, 4 = type de filtre**. À 0, les lignes n'ont ni date ni étiquette. Sur 3 196 lignes réelles d'`Auth.log`, `DBImport.log`, `Server.log` et `worldserver-error.log` : **0 ligne horodatée**, et 23 lignes seulement reçoivent un niveau — toutes le même `Can't set process priority class, error: Permission denied`, c'est-à-dire le bruit récurrent que `ServerDiagnosticService` filtre déjà.
+
+Conséquences, assumées dans l'interface plutôt que subies :
+
+- La corrélation avec l'historique est **indisponible en l'état** — c'est pourtant l'apport du module. Elle le redevient en passant les drapeaux à `3` (`Appender.Server=2,5,3,Server.log,w`) puis en redémarrant. Le rappel de l'interface donne cette ligne exacte.
+- Le filtre par niveau serait un **leurre** : tout tombe dans « Autres ». D'où `LogReadResult.HasLevels`, qui désactive les cases et le bouton « Problèmes » — sinon un clic viderait la grille sans explication. Seule la recherche par texte reste utile sur ce serveur.
+- Un journal sans préfixe est aussi le cas qui rendait l'héritage de niveau dangereux (voir plus bas) : ce n'était pas une hypothèse d'école, c'est la configuration réelle.
+
+Contenu réel des deux dossiers, qui confirme de ne pas coder les noms en dur — `DBImport.log` et `Playerbots.log` auraient été manqués :
+
+- `~/server/logs` : `Auth.log`, `DBImport.log`, `Errors.log` (vide), `Playerbots.log` (vide), `Server.log`
+- `~/.pm2/logs` : `authserver-error.log`, `authserver-out.log`, `worldserver-error.log` (2,1 Mo), **`worldserver-out.log` (9,9 Mo)** — qui justifie à lui seul de ne transférer que la fin.
+
 Points tranchés, à ne pas redécouvrir :
 
 - **Aucun nom de fichier n'est codé en dur** : le dossier est listé. Selon les appenders un serveur écrit `Server.log` et `Auth.log`, mais aussi `DBErrors.log`, `Errors.log`, des `gm_*.log` — et sous PM2 les `worldserver-error.log` / `worldserver-out.log`, **seuls à contenir un plantage survenu avant l'ouverture de `Server.log`** (c'est exactement le cas « Failed to find map files » du diagnostic SOAP). `/home/<user>/.pm2/logs` est donc un emplacement candidat, construit explicitement : **SFTP n'a pas de shell, donc pas d'expansion de `~`**.
 - **Le listage passe par `SftpClient.ListDirectory`**, pas par un `ls` analysé au texte : taille et date arrivent déjà typées, et la mise en forme de `ls` varie d'une distribution à l'autre.
 - **Seule la fin du fichier est transférée** (`SshService.ReadTailAsync` se positionne par décalage ; en local, `FileShare.ReadWrite` est obligatoire, le serveur garde son journal ouvert). Quand la lecture commence au milieu du fichier, **le premier saut de ligne est la seule frontière sûre** : avant lui on a une ligne tronquée et peut-être un caractère accentué coupé en plein milieu de sa séquence UTF-8.
-- **Le préfixe d'une ligne dépend des drapeaux de l'appender** (1 = horodatage, 2 = niveau, 4 = type de filtre) : les trois parties sont optionnelles, et le format de l'horodatage a varié selon les versions. `LogLineParser` accepte donc plusieurs formes (`_`, espace ou `T` entre date et heure ; `:` ou `-` dans l'heure ; crochets et fractions de seconde facultatifs) **au lieu d'en figer une de mémoire** — le serveur de référence était éteint au moment de l'écriture, et c'est précisément pour ça que l'analyse est isolée dans un fichier sans dépendances, vérifiable seule.
+- **Le préfixe d'une ligne dépend des drapeaux de l'appender** (1 = horodatage, 2 = niveau, 4 = type de filtre) : les trois parties sont optionnelles, et le format de l'horodatage a varié selon les versions. `LogLineParser` accepte donc plusieurs formes (`_`, espace ou `T` entre date et heure ; `:` ou `-` dans l'heure ; crochets et fractions de seconde facultatifs) **au lieu d'en figer une de mémoire**. L'analyse est isolée dans un fichier sans dépendances pour être éprouvée seule, ce qui a servi deux fois : d'abord sur des exemples pendant que le serveur était éteint, puis en mesure sur les journaux réels.
 - **L'héritage de niveau est borné.** Une ligne sans préfixe est la suite d'un message multi-ligne (pile d'appels, bloc SQL) et hérite de l'heure et du niveau de la ligne qui l'a ouverte — sinon elle disparaîtrait au premier filtre. Mais l'héritage n'a lieu **que si un horodatage a déjà été vu** : dans un journal écrit sans préfixe du tout, le niveau de la première ligne contaminerait tout le fichier.
 - Le niveau est cherché **en mot entier** (`\b`), comme dans l'Updater : sinon « information » donne INFO et « warnaccount » donne WARN.
 

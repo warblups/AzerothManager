@@ -64,6 +64,7 @@
                                 VerticalAlignment="Bottom">
                         <Button Content="Problèmes" Style="{StaticResource SecondaryButton}"
                                 Command="{Binding ShowProblemsOnlyCommand}"
+                                IsEnabled="{Binding CanFilterLevels}"
                                 ToolTip="N'afficher que les erreurs et les avertissements" />
                         <Button Content="Tout" Style="{StaticResource SecondaryButton}"
                                 Command="{Binding ShowEverythingCommand}" Margin="0" />
@@ -71,14 +72,22 @@
                     <StackPanel DockPanel.Dock="Left" Margin="0,0,14,0">
                         <TextBlock Text="Niveaux" Style="{StaticResource Caption}" />
                         <StackPanel Orientation="Horizontal">
+                            <!-- Desactivees quand le journal ne porte aucune etiquette : tout
+                                 serait « Autres », et decocher viderait la grille sans raison
+                                 visible. C'est le cas du serveur de reference. -->
                             <CheckBox Content="Erreurs" IsChecked="{Binding ShowError}"
+                                      IsEnabled="{Binding CanFilterLevels}"
                                       Foreground="{StaticResource Error}" Margin="0,0,10,0" />
                             <CheckBox Content="Avertis." IsChecked="{Binding ShowWarning}"
+                                      IsEnabled="{Binding CanFilterLevels}"
                                       Foreground="{StaticResource Warning}" Margin="0,0,10,0" />
-                            <CheckBox Content="Info" IsChecked="{Binding ShowInfo}" Margin="0,0,10,0" />
+                            <CheckBox Content="Info" IsChecked="{Binding ShowInfo}"
+                                      IsEnabled="{Binding CanFilterLevels}" Margin="0,0,10,0" />
                             <CheckBox Content="Debug" IsChecked="{Binding ShowDebug}"
+                                      IsEnabled="{Binding CanFilterLevels}"
                                       Foreground="{StaticResource Muted}" Margin="0,0,10,0" />
-                            <CheckBox Content="Autres" IsChecked="{Binding ShowOther}" Margin="0,0,14,0" />
+                            <CheckBox Content="Autres" IsChecked="{Binding ShowOther}"
+                                      IsEnabled="{Binding CanFilterLevels}" Margin="0,0,14,0" />
                             <CheckBox Content="Mes actions" IsChecked="{Binding ShowAdminActions}"
                                       IsEnabled="{Binding CanCorrelate}"
                                       Foreground="{StaticResource Accent}"
@@ -157,16 +166,18 @@
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding CanCorrelate}" Value="False">
+                                <DataTrigger Binding="{Binding PrefixesMissing}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
                     <StackPanel>
-                        <TextBlock Text="Journal sans horodatage" FontWeight="SemiBold" Margin="0,0,0,3" />
+                        <TextBlock Text="Journal sans préfixe" FontWeight="SemiBold" Margin="0,0,0,3" />
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                   Text="Aucune ligne lue ne porte de date : l'appender est configuré sans le drapeau d'horodatage. Les actions administrateur ne peuvent donc pas être replacées dans la chronologie. Pour l'activer, ajoutez 1 aux drapeaux de l'appender concerné dans worldserver.conf ou authserver.conf, puis redémarrez." />
+                                   Text="Ce journal ne porte ni date ni étiquette de niveau : son appender est configuré avec des drapeaux à 0. Les actions administrateur ne peuvent donc pas être replacées dans la chronologie, et le filtre par niveau est sans objet — seule la recherche par texte reste utile." />
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Text="Les drapeaux sont le troisième champ d'une ligne Appender : 1 ajoute l'horodatage, 2 le niveau. Dans worldserver.conf et authserver.conf, passer par exemple Appender.Server=2,5,0,Server.log,w à Appender.Server=2,5,3,Server.log,w, puis redémarrer le serveur." />
                     </StackPanel>
                 </Border>
 

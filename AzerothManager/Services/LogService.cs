@@ -168,7 +168,8 @@ public sealed class LogService
             Path: file.Path,
             FileSize: size,
             BytesRead: data.Length,
-            HasTimestamps: lines.Any(l => l.At is not null));
+            HasTimestamps: lines.Any(l => l.At is not null),
+            HasLevels: lines.Any(l => l.Severity != LogSeverity.Other));
     }
 
     /// <summary>

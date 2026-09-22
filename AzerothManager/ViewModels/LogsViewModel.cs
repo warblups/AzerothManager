@@ -62,11 +62,25 @@ public partial class LogsViewModel : ObservableObject
     [ObservableProperty] private string _fileHeader = "";
 
     /// <summary>
-    /// Faux quand aucune ligne lue ne porte d'horodatage : l'appender peut être configuré
-    /// sans le drapeau 1. La corrélation est alors impossible, et l'interface le dit au lieu
-    /// de produire un ordre inventé.
+    /// Faux quand aucune ligne lue ne porte d'horodatage : l'appender est configuré sans le
+    /// drapeau 1. La corrélation est alors impossible, et l'interface le dit au lieu de
+    /// produire un ordre inventé.
     /// </summary>
     [ObservableProperty] private bool _canCorrelate = true;
+
+    /// <summary>
+    /// Faux quand aucune ligne lue ne porte d'étiquette de niveau : l'appender est configuré
+    /// sans le drapeau 2. C'est le cas du serveur de référence, où les quatre appenders ont
+    /// des drapeaux à 0 — tout tombe alors dans « Autres », et proposer un filtre par niveau
+    /// reviendrait à offrir un bouton qui vide la grille. Les cases sont désactivées.
+    /// </summary>
+    [ObservableProperty] private bool _canFilterLevels = true;
+
+    /// <summary>Vrai quand il manque au moins un des deux préfixes : le rappel s'affiche.</summary>
+    public bool PrefixesMissing => !CanCorrelate || !CanFilterLevels;
+
+    partial void OnCanCorrelateChanged(bool value) => OnPropertyChanged(nameof(PrefixesMissing));
+    partial void OnCanFilterLevelsChanged(bool value) => OnPropertyChanged(nameof(PrefixesMissing));
 
     /// <summary>Emplacements sondés, montrés quand la recherche de journaux ne donne rien.</summary>
     [ObservableProperty] private string _searchedDirectories = "";
@@ -153,6 +167,11 @@ public partial class LogsViewModel : ObservableObject
             if (cts.IsCancellationRequested) return;
 
             CanCorrelate = result.HasTimestamps;
+            CanFilterLevels = result.HasLevels;
+
+            // Sans étiquette de niveau, tout est « Autres » : un filtre hérité d'un journal
+            // précédent masquerait la totalité des lignes sans que rien ne l'explique.
+            if (!result.HasLevels) ShowOther = true;
 
             _loaded.Clear();
             _loaded.AddRange(result.Lines);
@@ -286,6 +305,8 @@ public partial class LogsViewModel : ObservableObject
     [RelayCommand]
     private void ShowProblemsOnly()
     {
+        if (!CanFilterLevels) return;
+
         ShowError = true;
         ShowWarning = true;
         ShowInfo = false;

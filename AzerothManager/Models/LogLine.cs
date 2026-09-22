@@ -72,16 +72,20 @@ public sealed record LogFileInfo(string Path, string Name, string Directory, lon
 /// <summary>
 /// Résultat d'une lecture de journal.
 ///
-/// <see cref="HasTimestamps"/> décide de ce que l'interface peut offrir : sans horodatage
-/// dans les lignes, l'entrelacement avec les actions administrateur n'a pas de sens, et il
-/// vaut mieux le dire que produire un ordre inventé.
+/// <see cref="HasTimestamps"/> et <see cref="HasLevels"/> décident de ce que l'interface
+/// peut offrir. Les deux préfixes sont optionnels dans AzerothCore, et **sur le serveur de
+/// référence les appenders sont tous configurés avec des drapeaux à 0** : aucun horodatage,
+/// aucune étiquette de niveau. Mesuré sur 3 196 lignes réelles, pas supposé. Sans horodatage
+/// l'entrelacement avec les actions administrateur n'a pas de sens ; sans niveau, le filtre
+/// par niveau est un leurre. Mieux vaut le dire que laisser une grille se vider.
 /// </summary>
 public sealed record LogReadResult(
     IReadOnlyList<LogLine> Lines,
     string Path,
     long FileSize,
     long BytesRead,
-    bool HasTimestamps)
+    bool HasTimestamps,
+    bool HasLevels)
 {
     /// <summary>Vrai si le fichier était plus gros que la fenêtre demandée : on n'a que la fin.</summary>
     public bool Truncated => BytesRead < FileSize;
