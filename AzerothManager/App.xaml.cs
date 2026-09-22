@@ -65,6 +65,7 @@ public partial class App : Application
         var worldEditService = new WorldEditService(mySql, context, gameClient);
         var logService = new LogService(context, ssh);
         var announceService = new AnnounceService(gm, mySql, ssh, context);
+        var guildService = new GuildService(mySql, gm, context);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -92,7 +93,8 @@ public partial class App : Application
         var worldEdit = new WorldEditViewModel(worldEditService, context);
         var logs = new LogsViewModel(logService, context);
         var announce = new AnnounceViewModel(announceService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce);
+        var guilds = new GuildsViewModel(guildService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce, guilds);
 
         new MainWindow { DataContext = main }.Show();
     }

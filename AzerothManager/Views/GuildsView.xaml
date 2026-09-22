@@ -1,0 +1,237 @@
+<UserControl x:Class="AzerothManager.Views.GuildsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Bg}">
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding LoadDetailCommand}" />
+    </UserControl.InputBindings>
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Liste des guildes -->
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Content="🔍" Style="{StaticResource SuccessButton}"
+                        Command="{Binding SearchCommand}" VerticalAlignment="Bottom" Margin="6,0,0,0" />
+                <StackPanel>
+                    <TextBlock Text="Nom de guilde" Style="{StaticResource Caption}" />
+                    <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SearchCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </StackPanel>
+            </DockPanel>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Guilds}" SelectedItem="{Binding Selected}"
+                      IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                      HeadersVisibility="Column" EnableRowVirtualization="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Guilde" Binding="{Binding Name}" Width="*" MinWidth="110" />
+                    <DataGridTextColumn Header="Membres" Binding="{Binding MemberCount}" Width="65" />
+                    <DataGridTextColumn Header="Banque" Binding="{Binding BankMoneyText}" Width="95" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- Détail de la guilde sélectionnée -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Padding="10" CornerRadius="4" Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource BorderB}" BorderThickness="1" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Selected.Name, FallbackValue=—}" />
+                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0">
+                        <Run Text="Meneur : " /><Run Text="{Binding Selected.LeaderText, Mode=OneWay}" FontWeight="SemiBold" />
+                        <Run Text="  ·  créée le " /><Run Text="{Binding Selected.CreatedText, Mode=OneWay}" />
+                        <Run Text="  ·  caisse " /><Run Text="{Binding Selected.BankMoneyText, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="{Binding Selected.Motd, Mode=OneWay}" />
+                </StackPanel>
+            </Border>
+
+            <TabControl Grid.Row="1" IsEnabled="{Binding HasSelection}">
+
+                <TabItem Header="Membres">
+                    <Grid Margin="0,8,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <DataGrid Grid.Row="0" ItemsSource="{Binding Members}" SelectedItem="{Binding SelectedMember}"
+                                  IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                                  EnableRowVirtualization="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Personnage" Binding="{Binding Name}" Width="*" MinWidth="130" />
+                                <DataGridTextColumn Header="Niv." Binding="{Binding Level}" Width="50" />
+                                <DataGridTextColumn Header="Rang" Binding="{Binding RankText}" Width="150" />
+                                <DataGridTextColumn Header="" Binding="{Binding OnlineText}" Width="70" />
+                                <DataGridTextColumn Header="Note publique" Binding="{Binding PublicNote}" Width="1.2*" />
+                                <DataGridTextColumn Header="Note d'officier" Binding="{Binding OfficerNote}" Width="1.2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <DockPanel Grid.Row="1" Margin="0,8,0,0">
+                            <StackPanel DockPanel.Dock="Left" Width="60" Margin="0,0,8,0">
+                                <TextBlock Text="Rang" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Rank, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <Button DockPanel.Dock="Right" Content="⬆  Changer de rang" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding SetRankCommand}" VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                            <Button DockPanel.Dock="Right" Content="🚪  Exclure" Style="{StaticResource DangerButton}"
+                                    Command="{Binding UninviteCommand}" VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                            <Button DockPanel.Dock="Right" Content="＋  Ajouter" Style="{StaticResource SuccessButton}"
+                                    Command="{Binding InviteCommand}" VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                            <StackPanel>
+                                <TextBlock Text="Personnage" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding PlayerName, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Rangs">
+                    <DataGrid ItemsSource="{Binding Ranks}" IsReadOnly="True" AutoGenerateColumns="False"
+                              Margin="0,8,0,0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="rid" Binding="{Binding RankId}" Width="50" />
+                            <DataGridTextColumn Header="Nom" Binding="{Binding Name}" Width="*" MinWidth="140" />
+                            <DataGridTextColumn Header="Retrait quotidien" Binding="{Binding BankMoneyText}" Width="150" />
+                            <DataGridTextColumn Header="Droits" Binding="{Binding RightsText}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Banque">
+                    <Grid Margin="0,8,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                            <Button DockPanel.Dock="Right" Content="Tous les onglets"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding ShowAllTabsCommand}" VerticalAlignment="Bottom"
+                                    Margin="8,0,0,0" />
+                            <StackPanel>
+                                <TextBlock Text="Onglet (vide = toute la banque)" Style="{StaticResource Caption}" />
+                                <ComboBox ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </DockPanel>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding BankItems}" IsReadOnly="True"
+                                  AutoGenerateColumns="False" EnableRowVirtualization="True">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="" Width="34">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Image Width="24" Height="24"
+                                                   Source="{Binding DisplayId, Converter={StaticResource DisplayIdToIcon}}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Objet" Binding="{Binding Name}" Width="*" MinWidth="170">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{Binding Quality, Converter={StaticResource QualityToBrush}}" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Quantité" Binding="{Binding Count}" Width="70" />
+                                <DataGridTextColumn Header="Onglet" Binding="{Binding TabId}" Width="60" />
+                                <DataGridTextColumn Header="Case" Binding="{Binding SlotId}" Width="55" />
+                                <DataGridTextColumn Header="Modèle" Binding="{Binding Entry}" Width="70" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Journal de banque">
+                    <DataGrid ItemsSource="{Binding BankLog}" IsReadOnly="True" AutoGenerateColumns="False"
+                              Margin="0,8,0,0" EnableRowVirtualization="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding AtText}" Width="130" />
+                            <DataGridTextColumn Header="Action" Binding="{Binding TypeText}" Width="130" />
+                            <DataGridTextColumn Header="Personnage" Binding="{Binding PlayerText}" Width="140" />
+                            <DataGridTextColumn Header="Objet ou montant" Binding="{Binding SubjectText}" Width="*" MinWidth="170" />
+                            <DataGridTextColumn Header="Onglet" Binding="{Binding TabText}" Width="70" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Journal de guilde">
+                    <DataGrid ItemsSource="{Binding EventLog}" IsReadOnly="True" AutoGenerateColumns="False"
+                              Margin="0,8,0,0" EnableRowVirtualization="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding AtText}" Width="130" />
+                            <DataGridTextColumn Header="Action" Binding="{Binding TypeText}" Width="140" />
+                            <DataGridTextColumn Header="Qui" Binding="{Binding WhoText}" Width="*" MinWidth="200" />
+                            <DataGridTextColumn Header="Rang" Binding="{Binding RankText}" Width="60" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Guilde">
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Text="Nom" Style="{StaticResource Caption}" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="✏  Renommer" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding RenameCommand}" Margin="8,0,0,0" />
+                            <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="ℹ  Fiche serveur" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding InfoCommand}" />
+                            <Button Content="🏳  Créer une guilde" Style="{StaticResource SuccessButton}"
+                                    Command="{Binding CreateCommand}"
+                                    ToolTip="Le personnage meneur doit être connecté au jeu" />
+                            <Button Content="💥  Dissoudre" Style="{StaticResource DangerButton}"
+                                    Command="{Binding DeleteCommand}" Margin="0" />
+                        </StackPanel>
+
+                        <Border Background="#3d2f10" BorderBrush="{StaticResource Warning}" BorderThickness="1"
+                                CornerRadius="4" Padding="8,5" Margin="0,10,0,0">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="Créer une guilde exige que le personnage meneur soit connecté : le serveur construit la guilde à partir du joueur en mémoire et refuse sinon. Ajouter, exclure et changer de rang fonctionnent en revanche sur un personnage déconnecté. Le nom saisi ci-dessus sert à la fois au renommage et à la création." />
+                        </Border>
+
+                        <Border Padding="10" CornerRadius="4" Margin="0,10,0,0" Background="{StaticResource InputBg}"
+                                BorderBrush="{StaticResource BorderB}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Réponse du serveur" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+                                <TextBox Text="{Binding Output, Mode=OneWay}" IsReadOnly="True" MinHeight="70"
+                                         FontFamily="Consolas, Courier New" TextWrapping="Wrap"
+                                         AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                         Background="Transparent" BorderThickness="0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
+
+            <TextBlock Grid.Row="2" Text="{Binding Status}" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+        </Grid>
+    </Grid>
+</UserControl>

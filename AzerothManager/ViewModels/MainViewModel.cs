@@ -36,7 +36,8 @@ public partial class MainViewModel : ObservableObject
                          TeleportViewModel teleport,
                          WorldEditViewModel worldEdit,
                          LogsViewModel logs,
-                         AnnounceViewModel announce)
+                         AnnounceViewModel announce,
+                         GuildsViewModel guilds)
     {
         Context = context;
 
@@ -182,6 +183,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.2",
             IsAvailable = true,
             Content = announce
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "🏰",
+            Title = "Guildes",
+            Version = "v1.1",
+            IsAvailable = true,
+            Content = guilds
         });
 
         SelectedItem = Items[0];

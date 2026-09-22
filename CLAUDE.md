@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs** et **Annonces et arrêt**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt** et **Guildes**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **guildes et banque de guilde** (que le §9 désigne comme motif de ticket récurrent), **événements de jeu** (`world.game_event` + `.event`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **événements de jeu** (`world.game_event` + `.event`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -111,7 +111,7 @@ Le serveur de référence tourne sous **PM2** (`authserver` et `worldserver`), c
 
 Le profil actif est dans la base locale, mot de passe chiffré DPAPI sous la session Windows de l'utilisateur. Une session lancée sous ce compte peut donc **interroger le vrai serveur en lecture seule** pour valider une requête avant de l'intégrer. Reconstruire le script au besoin : lire la ligne active de `Servers`, déchiffrer via `ProtectedData.Unprotect` avec l'entropie `AzerothManager.Secrets.v1`, charger le `MySqlConnector.dll` du dossier de build, refuser tout ce qui n'est pas `SELECT`/`SHOW`/`DESCRIBE`, et ne jamais afficher de mot de passe.
 
-Cette méthode a évité plusieurs erreurs réelles : `StatsCount` n'existe pas dans `item_template`, `dmg_min1` est un `Single` et `socketColor_1` un `SByte`, `character_stats` était vide, les paramètres dans `LIMIT`/`OFFSET` passent bien. Conclusion générale : **vérifier les noms de colonnes, les types et les offsets DBC sur les fichiers et le serveur réels**, jamais de mémoire. Les élargissements de type sont tolérés par MySqlConnector (`Byte`/`UInt16`/`UInt32` → `GetInt32`, `COUNT` → `GetInt32`), ce qui a été mesuré et non supposé.
+Cette méthode a évité plusieurs erreurs réelles : `StatsCount` n'existe pas dans `item_template`, `dmg_min1` est un `Single` et `socketColor_1` un `SByte`, `character_stats` était vide, les paramètres dans `LIMIT`/`OFFSET` passent bien. Conclusion générale : **vérifier les noms de colonnes, les types et les offsets DBC sur les fichiers et le serveur réels**, jamais de mémoire. Les élargissements de type sont tolérés par MySqlConnector (`Byte`/`UInt16`/`UInt32` → `GetInt32`, `COUNT` → `GetInt32`), ce qui a été mesuré et non supposé. **`UInt64` → `GetInt64` passe également**, bien que ce ne soit pas un élargissement mais un changement de signe à taille égale : mesuré sur un `CAST(… AS UNSIGNED)`, parce que `guild.BankMoney` est un `bigint unsigned` et que les tables de guilde étaient vides — sans ligne à lire, seul un type reproduit permettait de trancher.
 
 **Les sources du core sont sur le serveur de référence**, dans `~/azerothcore`. C'est le moyen le plus sûr de trancher une question de commande : lire la `ChatCommandTable` du `cs_*.cpp` concerné donne le nom exact, la signature du gestionnaire et le drapeau `Console::Yes`/`No`, sans rien supposer. Cette lecture a déjà évité plusieurs erreurs — voir la section « Annonces et arrêt planifié ».
 
@@ -359,6 +359,28 @@ Annonces récurrentes — `.autobroadcast list|add|remove|locale`, toutes `Conso
 - La table est **`auth.autobroadcast`**, pas dans `world` : les commandes passent par `LoginDatabase` et filtrent sur `realmid`, la valeur `-1` valant tous les royaumes. La liste est lue en SQL plutôt qu'en analysant la sortie de `.autobroadcast list`, pour récupérer identifiant et poids exploitables.
 - **Aucun `.reload` à proposer** : `HandleAutobroadcastAddCommand` et `…Remove…` appellent eux-mêmes `sAutobroadcastMgr->LoadAutobroadcasts()`. La règle « écriture dans `world` → `.reload` » du §9 ne s'applique pas ici, et un bouton `.reload` serait redondant.
 - **`AutoBroadcast.On = 0` sur le serveur de référence** : une annonce ajoutée part en base et n'est jamais diffusée. Le module lit `AutoBroadcast.On`, `Timer` et `Center` dans `worldserver.conf` (localement sous Windows, par SSH sous Linux) et l'annonce — sans quoi l'absence de diffusion passerait pour un défaut de l'application. C'est de la consultation de configuration, pas de la gestion : la frontière du §3 tient.
+
+## Guildes et banque de guilde (CdC §8 et §9)
+
+Module hybride selon le §5 : **SQL pour la consultation**, qui porte ici l'essentiel de la valeur — le §9 range les litiges de vol de banque parmi les motifs de ticket récurrents, et ce qui les tranche est le *journal*, pas une commande — et **commandes GM pour les écritures**, faute de quoi le worldserver ignorerait un membre inséré à la main jusqu'au redémarrage.
+
+Les sept commandes `.guild` sont `Console::Yes` (`cs_guild.cpp`). Une seule contrainte de fond :
+
+- **`.guild create` exige un joueur connecté** : `if (!target || !target->IsConnected())` refuse, la guilde étant construite à partir de l'objet `Player` en mémoire. En revanche `invite`, `uninvite` et `rank` **fonctionnent hors ligne**, en passant par `sCharacterCache->GetCharacterGuildIdByGuid`. Ne pas généraliser la contrainte de `create` aux autres.
+- Les noms de guilde sont des **`QuotedString`** : sans guillemets, un nom en deux mots est tronqué. Même traitement que dans `MailService`.
+- `.guild delete "Nom"` appelle `Disband()` : guilde, rangs, membres et contenu de banque disparaissent, sans reprise possible depuis l'application.
+- `.guild rank <joueur> <rid>` : `ChangeMemberRank` refuse un `rid` absent de *cette* guilde. L'interface vérifie contre les rangs chargés avant d'envoyer.
+
+Schéma vérifié sur le serveur réel :
+
+- `guild` — `BankMoney` est un **`bigint unsigned` en cuivre**, `createdate` un horodatage Unix, `motd` 128 caractères et `info` 500.
+- `guild_member.rank` renvoie à `guild_rank.rid` **de la même guilde** : les rangs sont numérotés par guilde, pas globalement. La jointure doit donc porter sur `guildid` *et* `rid`.
+- `guild_rank` — `rights` est un masque, `BankMoneyPerDay` en cuivre, `0xFFFFFFFF` valant « sans limite » (le maître de guilde).
+- `guild_bank_item` ne stocke que le **guid** de l'objet : joindre `item_instance` pour l'`itemEntry`, puis `world.item_template` — exactement comme `character_inventory` dans l'armurerie.
+- `guild_bank_eventlog` — **`ItemOrMoney` a deux sens selon `EventType`** : un identifiant d'objet pour les mouvements d'objets, un **montant en cuivre** pour les types 4, 5 et 6 (dépôt, retrait, réparation). C'est le piège principal de la table : joindre `item_template` sans filtrer le type afficherait le nom de l'objet dont l'identifiant vaut le montant, soit « 500 pièces d'or » rendu en nom d'épée. Types : 1 dépôt d'objet, 2 retrait, 3 déplacement, 4 dépôt d'argent, 5 retrait d'argent, 6 réparation, 7 déplacement, 9 achat d'onglet.
+- `guild_eventlog` — `PlayerGuid1` est la **cible**, `PlayerGuid2` l'**auteur** quand l'action en a un. Types : 1 invitation, 2 arrivée, 3 promotion, 4 rétrogradation, 5 exclusion, 6 départ.
+
+**Les huit tables de guilde sont vides sur le serveur de référence** : aucune guilde n'y a été fondée. Comme pour `character_stats` dans l'armurerie, le module le dit plutôt que de laisser croire à une panne — et les requêtes ont dû être validées autrement, en les exécutant pour vérifier colonnes et jointures, et en reproduisant les types à part.
 
 ## Licence et référence externe (CdC §4)
 
