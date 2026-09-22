@@ -428,10 +428,10 @@
                                       IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
-                                    <Border x:Name="bd" Background="Transparent" Padding="9,7,10,4">
+                                    <Border x:Name="bd" Background="Transparent" Padding="9,8,10,5">
                                         <DockPanel>
                                             <TextBlock x:Name="glyph" DockPanel.Dock="Left" Text="▾"
-                                                       FontSize="10" Width="13" VerticalAlignment="Center"
+                                                       FontSize="11" Width="15" VerticalAlignment="Center"
                                                        Foreground="{StaticResource Muted}" />
                                             <ContentPresenter VerticalAlignment="Center" />
                                         </DockPanel>

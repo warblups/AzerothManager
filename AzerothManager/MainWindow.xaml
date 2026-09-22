@@ -63,7 +63,7 @@
                                                                        Style="{StaticResource Caption}"
                                                                        Margin="8,0,0,0" VerticalAlignment="Center" />
                                                             <TextBlock Text="{Binding Name.Title}"
-                                                                       FontSize="11" FontWeight="SemiBold">
+                                                                       FontSize="13" FontWeight="SemiBold">
                                                                 <TextBlock.Style>
                                                                     <Style TargetType="TextBlock">
                                                                         <Setter Property="Foreground" Value="{StaticResource Muted}" />
