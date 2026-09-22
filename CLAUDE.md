@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde** et **Logs**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs** et **Annonces et arrêt**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **événements de jeu** (`world.game_event` + `.event`), **annonces et arrêt planifié** (`.announce`, `.notify`, `.server shutdown`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **guildes et réputation** (v1.1), puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **guildes et banque de guilde** (que le §9 désigne comme motif de ticket récurrent), **événements de jeu** (`world.game_event` + `.event`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -112,6 +112,10 @@ Le serveur de référence tourne sous **PM2** (`authserver` et `worldserver`), c
 Le profil actif est dans la base locale, mot de passe chiffré DPAPI sous la session Windows de l'utilisateur. Une session lancée sous ce compte peut donc **interroger le vrai serveur en lecture seule** pour valider une requête avant de l'intégrer. Reconstruire le script au besoin : lire la ligne active de `Servers`, déchiffrer via `ProtectedData.Unprotect` avec l'entropie `AzerothManager.Secrets.v1`, charger le `MySqlConnector.dll` du dossier de build, refuser tout ce qui n'est pas `SELECT`/`SHOW`/`DESCRIBE`, et ne jamais afficher de mot de passe.
 
 Cette méthode a évité plusieurs erreurs réelles : `StatsCount` n'existe pas dans `item_template`, `dmg_min1` est un `Single` et `socketColor_1` un `SByte`, `character_stats` était vide, les paramètres dans `LIMIT`/`OFFSET` passent bien. Conclusion générale : **vérifier les noms de colonnes, les types et les offsets DBC sur les fichiers et le serveur réels**, jamais de mémoire. Les élargissements de type sont tolérés par MySqlConnector (`Byte`/`UInt16`/`UInt32` → `GetInt32`, `COUNT` → `GetInt32`), ce qui a été mesuré et non supposé.
+
+**Les sources du core sont sur le serveur de référence**, dans `~/azerothcore`. C'est le moyen le plus sûr de trancher une question de commande : lire la `ChatCommandTable` du `cs_*.cpp` concerné donne le nom exact, la signature du gestionnaire et le drapeau `Console::Yes`/`No`, sans rien supposer. Cette lecture a déjà évité plusieurs erreurs — voir la section « Annonces et arrêt planifié ».
+
+Mais **la source n'est pas toujours cohérente avec elle-même** : le message d'erreur de `.server set motd` annonce une locale `zhWE` qui n'existe nulle part ailleurs dans le code, la vraie valeur de `localeNames` (`Common.cpp`) étant `zhTW`. Recopier un littéral trouvé dans un message ne remplace pas la table qui fait foi, et exécuter la commande pour de vrai reste le dernier mot.
 
 Conséquence pratique : fermer l'application avant tout `dotnet build`, l'exécutable étant verrouillé.
 
@@ -336,6 +340,25 @@ Points tranchés, à ne pas redécouvrir :
 - Le niveau est cherché **en mot entier** (`\b`), comme dans l'Updater : sinon « information » donne INFO et « warnaccount » donne WARN.
 
 Le filtrage (niveaux, texte) s'applique à la fenêtre déjà lue, **sans relire le fichier** : changer une case ne doit pas relancer un transfert SFTP. La quantité lue est un choix explicite de l'interface (200 Ko / 1 Mo / 4 Mo) et l'en-tête annonce ce qui a réellement été transféré ; l'affichage est plafonné à 5 000 lignes, la fin étant conservée.
+
+## Annonces et arrêt planifié (CdC §9)
+
+Module entièrement piloté par commandes GM, et c'est ce qui le rend faisable : les tables de `cs_server.cpp`, `cs_message.cpp` et `cs_autobroadcast.cpp` sont **toutes `Console::Yes`** — seul `.whispers` ne l'est pas, et il ne relève pas de l'annonce. Rien ici n'exige de personnage connecté, contrairement aux §10-11.
+
+Pièges vérifiés aux sources, puis à l'exécution :
+
+- **`.server shutdown` n'arrête pas ce serveur.** PM2 tourne avec `autorestart = true` (257 redémarrages relevés sur le worldserver) : le processus sort et PM2 le relance aussitôt. Arrêt et redémarrage y produisent donc le même effet — un redémarrage avec compte à rebours annoncé. Pour arrêter réellement, c'est l'Updater. La frontière du §3 tient, et l'interface le dit au lieu de laisser croire à un arrêt.
+- **Le motif d'un arrêt ne peut pas commencer par un nombre de 0 à 125.** La signature est `(std::string time, Optional<int32> exitCode, Tail reason)` : le nombre est pris pour le code de sortie, et surtout la branche qui le reçoit appelle `ShutdownServ(delay, 0, *exitCode)` **sans le motif**. Le texte disparaît en silence. `AnnounceService.ReasonWouldBeSwallowed` refuse plutôt que de réécrire le message de l'utilisateur, et **aucun code de sortie n'est jamais transmis**.
+- **Un délai sans suffixe est lu en secondes.** `TimeStringToSecs` (`Util.cpp`) accepte `d`, `h`, `m`, `s`, cumulables (`1h30m`), et renvoie 0 sur tout autre caractère ; le gestionnaire se rabat alors sur un entier nu. Donc `5` planifie l'arrêt dans **cinq secondes**, pas cinq minutes. `TryParseDelay` reproduit la règle pour afficher la durée retenue avant l'envoi.
+- **Les annonces signées affichent « Console ».** `HandleNameAnnounceCommand` lit `handler->GetSession()` et retombe sur la chaîne `"Console"` quand il n'y en a pas — c'est exactement le cas de SOAP. On ne peut pas signer une annonce du nom d'un personnage depuis l'application.
+- **`.server set motd` exige une locale**, et l'identifiant de royaume optionnel la précède : `.server set motd Bonjour à tous` échoue avec « locale (Bonjour) is not valid ». En `enUS` la valeur va dans `auth.motd`, sinon dans `auth.motd_localized`. **La locale chinoise traditionnelle est `zhTW`** : le message d'erreur de la commande dit `zhWE`, qui n'existe nulle part ailleurs — coquille d'AzerothCore, repérée en comparant la sortie réelle de `.server motd` à `localeNames`.
+- **`.server set closed` n'est pas persistant** : l'état retombe au redémarrage du worldserver.
+
+Annonces récurrentes — `.autobroadcast list|add|remove|locale`, toutes `Console::Yes` :
+
+- La table est **`auth.autobroadcast`**, pas dans `world` : les commandes passent par `LoginDatabase` et filtrent sur `realmid`, la valeur `-1` valant tous les royaumes. La liste est lue en SQL plutôt qu'en analysant la sortie de `.autobroadcast list`, pour récupérer identifiant et poids exploitables.
+- **Aucun `.reload` à proposer** : `HandleAutobroadcastAddCommand` et `…Remove…` appellent eux-mêmes `sAutobroadcastMgr->LoadAutobroadcasts()`. La règle « écriture dans `world` → `.reload` » du §9 ne s'applique pas ici, et un bouton `.reload` serait redondant.
+- **`AutoBroadcast.On = 0` sur le serveur de référence** : une annonce ajoutée part en base et n'est jamais diffusée. Le module lit `AutoBroadcast.On`, `Timer` et `Center` dans `worldserver.conf` (localement sous Windows, par SSH sous Linux) et l'annonce — sans quoi l'absence de diffusion passerait pour un défaut de l'application. C'est de la consultation de configuration, pas de la gestion : la frontière du §3 tient.
 
 ## Licence et référence externe (CdC §4)
 

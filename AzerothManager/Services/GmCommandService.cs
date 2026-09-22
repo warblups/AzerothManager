@@ -35,7 +35,8 @@ public sealed class GmCommandService
     [
         "server info", "pinfo", "gps", "guid", "distance", "lookup", "list",
         "account onlinelist", "ticket list", "ticket viewid", "npc info",
-        "gobject info", "character check", "baninfo", "banlist", "gm list", "cheat status"
+        "gobject info", "character check", "baninfo", "banlist", "gm list", "cheat status",
+        "server motd", "autobroadcast list"
     ];
 
     private readonly ServerContext _context;

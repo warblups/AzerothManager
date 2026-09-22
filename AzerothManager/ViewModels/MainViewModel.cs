@@ -35,7 +35,8 @@ public partial class MainViewModel : ObservableObject
                          ModerationViewModel moderation,
                          TeleportViewModel teleport,
                          WorldEditViewModel worldEdit,
-                         LogsViewModel logs)
+                         LogsViewModel logs,
+                         AnnounceViewModel announce)
     {
         Context = context;
 
@@ -172,6 +173,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.2",
             IsAvailable = true,
             Content = logs
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "📢",
+            Title = "Annonces et arrêt",
+            Version = "v1.2",
+            IsAvailable = true,
+            Content = announce
         });
 
         SelectedItem = Items[0];
