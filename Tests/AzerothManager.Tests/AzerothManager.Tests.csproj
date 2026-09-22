@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests volontairement étroits. Le cahier des charges exclut une infrastructure de tests
+    lourde et toute CI : on ne couvre donc que la **logique pure**, celle qui a déjà produit
+    des défauts réels et qu'on ne peut pas éprouver contre le serveur.
+
+    Ce qui touche MySQL, SSH ou SOAP n'est pas testé ici : il n'y a rien à simuler qui vaille
+    la vérification contre le serveur réel, qui reste la méthode du projet.
+
+    Le projet applicatif est publié self-contained : un projet de test qui le référence doit
+    l'être aussi, sans quoi le SDK refuse la référence (NETSDK1151).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AzerothManager\AzerothManager.csproj" />
+  </ItemGroup>
+
+</Project>

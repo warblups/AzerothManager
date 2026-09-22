@@ -37,7 +37,8 @@ public partial class MainViewModel : ObservableObject
                          WorldEditViewModel worldEdit,
                          LogsViewModel logs,
                          AnnounceViewModel announce,
-                         GuildsViewModel guilds)
+                         GuildsViewModel guilds,
+                         GameEventsViewModel gameEvents)
     {
         Context = context;
 
@@ -192,6 +193,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.1",
             IsAvailable = true,
             Content = guilds
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "🎉",
+            Title = "Événements de jeu",
+            Version = "v1.2",
+            IsAvailable = true,
+            Content = gameEvents
         });
 
         SelectedItem = Items[0];

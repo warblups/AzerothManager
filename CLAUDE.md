@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt** et **Guildes**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt**, **Guildes** et **Événements de jeu**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **événements de jeu** (`world.game_event` + `.event`), **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -382,6 +382,26 @@ Schéma vérifié sur le serveur réel :
 
 **Les huit tables de guilde sont vides sur le serveur de référence** : aucune guilde n'y a été fondée. Comme pour `character_stats` dans l'armurerie, le module le dit plutôt que de laisser croire à une panne — et les requêtes ont dû être validées autrement, en les exécutant pour vérifier colonnes et jointures, et en reproduisant les types à part.
 
+## Événements de jeu (CdC §9)
+
+Les quatre commandes `.event` — `activelist`, `start`, `stop`, `info` — sont `Console::Yes`. Le serveur de référence porte **182 événements**, 11 460 liens de créature et 32 363 liens d'objet.
+
+**Deux mécanismes distincts, et c'est l'essentiel du module :**
+
+- `.event start` / `.event stop` agissent **en mémoire seulement**. `GameEventMgr` modifie son `_gameEvent[id]` sans rien écrire dans `world.game_event` : au redémarrage, la planification reprend la main.
+- Modifier la planification en base est **persistant mais inerte à chaud** : il n'existe **pas de `.reload game_event`** (`cs_reload.cpp` ne recharge que `game_event_npc_vendor`). Même situation que les spawns de l'édition du monde — la règle « écriture dans `world` → `.reload` » du §9 ne s'applique pas.
+
+Il n'y a donc aucun moyen d'obtenir les deux à la fois, et l'interface le dit au lieu de laisser croire à un bug.
+
+Pièges vérifiés, dont un trouvé en comparant le module au serveur :
+
+- **`occurence` et `length` sont en minutes** : `GameEventMgr` les multiplie par `MINUTE`. 525 600 pour un événement annuel, 20 160 pour une fête de deux semaines. Les lire en secondes donnerait des périodes absurdes. La durée ne peut pas dépasser la période, sinon l'événement ne s'arrête jamais.
+- **`Holidays.dbc` écrase la planification de la base.** Le module affichait 15 jours pour Brewfest quand `.event info` en annonçait 16 : `SetHolidayEventTime` remplace `Length` — et souvent `Occurence` et `Start` — par les valeurs du DBC. Elle sort immédiatement si **`holidayStage` vaut 0** : c'est bien l'**étape**, pas `holiday`, qui déclenche l'écrasement. Pour ces événements, modifier `occurence`/`length` en base ne sert à rien, même après redémarrage ; la colonne « Planif. » dit d'où vient réellement la valeur.
+- **Un `eventEntry` négatif** dans `game_event_creature` / `game_event_gameobject` désigne un spawn **retiré** pendant l'événement : `ApplyNewEvent` appelle `GameEventUnspawn(-eventId)`. Les additionner aux autres laisserait croire que l'événement ajoute ce qu'il enlève. Vu en vrai : Invasion du Fléau `+332 / −50`, Sanssaint `+10 145 / −7`.
+- **`announce`** : 1 annonce toujours, 0 jamais, **2 suit `Event.Announce` de la configuration** (`ApplyNewEvent`).
+- **L'état actif ne se recalcule pas depuis la base.** Ce serait réimplémenter `IsActiveEvent`, et se tromper dès qu'un événement a été lancé à la main — puisque cela ne laisse aucune trace en base. Il est demandé au serveur par `.event activelist`, dont la sortie console est `<id> - <description>  [active]`.
+- `game_event_quest` **n'existe pas** sur ce serveur : chaque table satellite est testée dans `information_schema` avant usage, comme dans l'édition du monde.
+
 ## Licence et référence externe (CdC §4)
 
 Le projet est sous **GPL-3.0** (dépôt `warblups/AzerothManager`), licence choisie pour être identique à celle de l'addon **AzerothAdmin** (dérivé de TrinityAdmin/MangAdmin), qui a servi de référence au découpage fonctionnel.
@@ -419,7 +439,7 @@ Points à trancher avant d'implémenter le point 3, à ne pas supposer résolus 
 Outil personnel, pour un serveur fréquenté par quelques amis / une guilde. En conséquence :
 
 - **Pas de rôles ni de permissions.** Le mode lecture seule reste, mais comme garde-fou contre la fausse manip en production, pas comme gestion d'accès.
-- **Pas d'infra de tests lourde, pas de CI, pas d'installeur signé.**
+- **Pas de CI, pas d'installeur signé.** Il existe en revanche un projet de tests **volontairement étroit** (`Tests/AzerothManager.Tests`, xUnit, `dotnet test`) : il ne couvre que la **logique pure** — analyse d'une ligne de journal, règles de délai et de motif d'un arrêt, sens des colonnes à double signification, mise en forme des durées et des montants. Rien de ce qui touche MySQL, SSH ou SOAP n'y est simulé : la vérification contre le serveur réel reste la méthode du projet, et un faux serveur ne prouverait rien. Les tests servent à figer ce que la lecture des sources a coûté cher à établir, en particulier quand le serveur ne permet pas de l'observer — les tables de guilde y sont vides. Le projet applicatif étant publié self-contained, le projet de tests doit l'être aussi (`SelfContained`), sinon le SDK refuse la référence (NETSDK1151) ; il accède aux membres `internal` par `InternalsVisibleTo`.
 - L'historique sert à retrouver ce qu'on a fait il y a trois jours, pas à arbitrer entre administrateurs.
 - Priorité : outils GM et édition du monde d'abord, puis courrier et restauration. Modération légère ; économie et anti-triche en dernier.
 
