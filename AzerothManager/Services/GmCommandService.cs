@@ -13,6 +13,18 @@ namespace AzerothManager.Services;
 public readonly record struct GmCommandResult(bool Success, string Output, long ElapsedMs);
 
 /// <summary>
+/// La commande a bien été transmise et exécutée, mais le serveur l'a refusée.
+///
+/// Distinguer ce cas d'une panne de transport est nécessaire : ACSoap répond par une **faute
+/// SOAP** dès que le gestionnaire renvoie `false`, et y place la sortie complète de la
+/// commande (`soap_sender_fault(soap, printBuffer, printBuffer)`). Or `false` n'est pas un
+/// indicateur d'échec fiable côté AzerothCore — `HandleInstanceStatsCommand` affiche ses
+/// statistiques puis renvoie `false`. Confondre les deux faisait accoler un diagnostic SSH
+/// accusant le compte SOAP à des commandes qui avaient parfaitement abouti.
+/// </summary>
+public sealed class GmCommandFaultException(string message) : Exception(message);
+
+/// <summary>
 /// Exécution des commandes GM via l'interface SOAP du worldserver (§16).
 ///
 /// Vérifié dans les sources AzerothCore (src/server/apps/worldserver/ACSoap) :
@@ -96,6 +108,16 @@ public sealed class GmCommandService
             Log.Information("Commande GM exécutée : .{Command}", command);
             return new GmCommandResult(true, output, sw.ElapsedMilliseconds);
         }
+        catch (GmCommandFaultException ex)
+        {
+            sw.Stop();
+
+            // Refus de la commande elle-même : le transport a fonctionné. Aller sonder le
+            // serveur par SSH ne dirait rien d'utile, et l'explication qui en sortirait
+            // (« vérifiez le compte SOAP ») serait fausse.
+            LocalDatabase.LogHistory(p.Id, "gm", "." + command, "REFUS : " + ex.Message);
+            return new GmCommandResult(false, ex.Message, sw.ElapsedMilliseconds);
+        }
         catch (Exception ex)
         {
             sw.Stop();
@@ -152,6 +174,12 @@ public sealed class GmCommandService
                 // Authentification refusée : réessayer sur une autre adresse n'y changerait rien.
                 throw;
             }
+            catch (GmCommandFaultException)
+            {
+                // Le serveur a répondu : la commande a été refusée, pas le tunnel. Réessayer
+                // sur l'autre adresse la ferait exécuter une seconde fois.
+                throw;
+            }
             catch (Exception ex)
             {
                 last = ex;
@@ -203,7 +231,7 @@ public sealed class GmCommandService
     }
 
     /// <summary>Extrait &lt;result&gt;, ou la faute SOAP renvoyée par le serveur.</summary>
-    private static string ParseResult(string xml)
+    internal static string ParseResult(string xml)
     {
         XDocument doc;
         try { doc = XDocument.Parse(xml); }
@@ -212,8 +240,10 @@ public sealed class GmCommandService
         var result = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "result");
         if (result is not null) return result.Value.Trim();
 
+        // Une faute SOAP signifie « le serveur a refusé », pas « le serveur est injoignable » :
+        // son texte est la sortie de la commande, et il n'y a rien à diagnostiquer en amont.
         var fault = doc.Descendants().FirstOrDefault(e => e.Name.LocalName is "faultstring" or "detail");
-        if (fault is not null) throw new InvalidOperationException(fault.Value.Trim());
+        if (fault is not null) throw new GmCommandFaultException(fault.Value.Trim());
 
         return xml.Trim();
     }

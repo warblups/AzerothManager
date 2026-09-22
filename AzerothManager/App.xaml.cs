@@ -67,6 +67,7 @@ public partial class App : Application
         var announceService = new AnnounceService(gm, mySql, ssh, context);
         var guildService = new GuildService(mySql, gm, context);
         var gameEventService = new GameEventService(mySql, gm, context);
+        var instanceLockService = new InstanceLockService(mySql, gm, context, gameClient);
 
         // Restauration du serveur actif au démarrage.
         context.Active = profiles.GetActive();
@@ -96,7 +97,8 @@ public partial class App : Application
         var announce = new AnnounceViewModel(announceService, context);
         var guilds = new GuildsViewModel(guildService, context);
         var gameEvents = new GameEventsViewModel(gameEventService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce, guilds, gameEvents);
+        var instanceLocks = new InstanceLocksViewModel(instanceLockService, context);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce, guilds, gameEvents, instanceLocks);
 
         new MainWindow { DataContext = main }.Show();
     }

@@ -38,7 +38,8 @@ public partial class MainViewModel : ObservableObject
                          LogsViewModel logs,
                          AnnounceViewModel announce,
                          GuildsViewModel guilds,
-                         GameEventsViewModel gameEvents)
+                         GameEventsViewModel gameEvents,
+                         InstanceLocksViewModel instanceLocks)
     {
         Context = context;
 
@@ -202,6 +203,15 @@ public partial class MainViewModel : ObservableObject
             Version = "v1.2",
             IsAvailable = true,
             Content = gameEvents
+        });
+
+        Items.Add(new NavigationItem
+        {
+            Icon = "🔒",
+            Title = "Verrous d'instance",
+            Version = "v1.2",
+            IsAvailable = true,
+            Content = instanceLocks
         });
 
         SelectedItem = Items[0];

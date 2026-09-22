@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt**, **Guildes** et **Événements de jeu**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt**, **Guildes**, **Événements de jeu** et **Verrous d'instance**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **verrous d'instance**, **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -137,6 +137,7 @@ Deux pièges qui ont dicté l'implémentation :
 
 - `SOAP.IP` vaut `127.0.0.1` par défaut : le port n'est pas joignable depuis l'extérieur. Et l'authentification Basic circule **en clair**. D'où le **tunnel SSH** (`ForwardedPortLocal`, port local 0) plutôt qu'exposer `SOAP.IP` sur le réseau. Le tunnel est monté par appel — simple, sans état partagé ; à mettre en cache si la latence gêne.
 - En mode lecture seule, les commandes GM sont refusées **sauf** une liste blanche d'informatives (`GmCommandService.ReadOnlyAllowed` : `server info`, `pinfo`, `lookup`, `ticket list`…), une commande GM étant par défaut une écriture.
+- **Une faute SOAP n'est pas une panne.** ACSoap répond par `soap_sender_fault(soap, printBuffer, printBuffer)` dès que le gestionnaire renvoie `false`, en y plaçant **la sortie complète de la commande**. Or `false` n'indique pas un échec côté AzerothCore : `HandleInstanceStatsCommand` affiche ses statistiques puis renvoie `false`. `GmCommandService` distingue donc `GmCommandFaultException` (refus de la commande, transport intact) du reste (transport en panne), et **ne lance le diagnostic SSH que pour le second**. Avant cette distinction, une commande parfaitement aboutie se voyait accoler « l'échec vient probablement du compte SOAP » — le contraire de ce que vise `ServerDiagnosticService`. Le tunnel doit aussi relayer cette exception sans réessayer sur l'autre adresse, faute de quoi la commande serait exécutée deux fois.
 
 ## Données du client 3.3.5a — icônes et noms de sorts
 
@@ -401,6 +402,20 @@ Pièges vérifiés, dont un trouvé en comparant le module au serveur :
 - **`announce`** : 1 annonce toujours, 0 jamais, **2 suit `Event.Announce` de la configuration** (`ApplyNewEvent`).
 - **L'état actif ne se recalcule pas depuis la base.** Ce serait réimplémenter `IsActiveEvent`, et se tromper dès qu'un événement a été lancé à la main — puisque cela ne laisse aucune trace en base. Il est demandé au serveur par `.event activelist`, dont la sortie console est `<id> - <description>  [active]`.
 - `game_event_quest` **n'existe pas** sur ce serveur : chaque table satellite est testée dans `information_schema` avant usage, comme dans l'édition du monde.
+
+## Verrous d'instance (CdC §9)
+
+**Le canal est le SQL, faute de mieux.** `.instance listbinds` et `.instance unbind` sont **`Console::No`** : elles agissent sur le joueur sélectionné ou sur la session du maître de jeu. Seule `.instance stats` du groupe est `Console::Yes` — et elle revient en faute SOAP, voir la section sur le canal d'exécution.
+
+**Une levée en base n'agit qu'au redémarrage du worldserver, et c'est plus strict que la règle de l'or.** `InstanceSaveMgr::LoadCharacterBinds` (appelée par `LoadInstances`, elle-même appelée une fois depuis `World.cpp`) lit **toute** la table `character_instance` au démarrage et garde les liens dans `playerBindStorage` pour la durée de vie du serveur — **pour tous les personnages, connectés ou non**. Écrire hors ligne ne suffit donc pas ici, contrairement à `characters.money`. La suppression est bien persistante ; c'est son effet qui est différé.
+
+- **Ne pas nettoyer `instance`.** Le serveur supprime lui-même les lignes orphelines au démarrage (`DELETE i.* FROM instance AS i LEFT JOIN character_instance AS ci ON i.id = ci.instance WHERE ci.guid IS NULL`), ainsi que les `creature_respawn` et `gameobject_respawn` associés. Les effacer depuis l'application risquerait d'emporter une instance encore référencée.
+- **La difficulté est laissée en chiffre.** En 3.3.5a, 0 et 1 valent « normal » et « héroïque » pour un donjon, mais « 10 » et « 25 joueurs » pour un raid, 2 et 3 étant leurs modes héroïques. Rien dans `instance` ni `character_instance` ne dit le type ; `Map.dbc` le porterait, mais l'import DBC du projet ne conserve que le nom. L'inférer depuis les difficultés présentes dans `instance_reset` se tromperait sur les raids sans mode héroïque — le chiffre brut et une légende valent mieux.
+- `character_instance` : `guid`, `instance`, `permanent`, `extended`. **`permanent`** distingue le verrou de raid (jusqu'à la réinitialisation hebdomadaire) du verrou de donjon ; **`extended`** signale un report d'une semaine demandé par le joueur.
+- `instance` : `id`, `map`, `resettime`, `difficulty`, **`completedEncounters`** — un **masque de bits** des rencontres vaincues, pas un compteur.
+- `instance_reset` (mapid, difficulty, resettime) porte les réinitialisations programmées : 73 lignes sur le serveur de référence, et souvent la vraie réponse à « quand ce raid rouvre-t-il ? ».
+
+`instance` et `character_instance` sont vides sur le serveur de référence, `instance_saved_data` n'y existe pas.
 
 ## Licence et référence externe (CdC §4)
 

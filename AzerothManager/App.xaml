@@ -70,6 +70,9 @@
             <DataTemplate DataType="{x:Type vm:GameEventsViewModel}">
                 <views:GameEventsView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:InstanceLocksViewModel}">
+                <views:InstanceLocksView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
