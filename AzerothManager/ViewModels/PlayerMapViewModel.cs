@@ -16,6 +16,15 @@ public partial class PlayerMapViewModel : ObservableObject
     private IReadOnlyList<PlayerPosition> _placed = [];
     private IReadOnlyList<ZonePopulation> _zones = [];
 
+    /// <summary>
+    /// Chargement en cours, annulable.
+    ///
+    /// Cocher « inclure les hors ligne » lance un chargement sans l'attendre : sans ce
+    /// garde, un second chargement demandé entre-temps vide et remplit les mêmes
+    /// collections pendant que le premier les parcourt encore.
+    /// </summary>
+    private CancellationTokenSource? _pending;
+
     public Continent[] Continents => Continent.All;
 
     /// <summary>Joueurs du continent affiché.</summary>
@@ -30,6 +39,9 @@ public partial class PlayerMapViewModel : ObservableObject
     /// <summary>Toutes les zones peuplées, tous continents confondus.</summary>
     public ObservableCollection<ZonePopulation> AllZones { get; } = [];
 
+    /// <summary>Joueurs de la zone retenue : le détail derrière le compteur d'une bulle.</summary>
+    public ObservableCollection<PlayerPosition> ZonePlayers { get; } = [];
+
     /// <summary>Les quatre continents juxtaposés, pour la vue générale.</summary>
     public ObservableCollection<ContinentPanel> Panels { get; } = [];
 
@@ -39,6 +51,16 @@ public partial class PlayerMapViewModel : ObservableObject
     private Continent? _continent;
 
     [ObservableProperty] private bool _includeOffline;
+
+    /// <summary>
+    /// Zone dont on regarde le détail. Une bulle annonce un effectif ; cliquer dessus
+    /// répond à la question suivante, qui est toujours « qui ? ».
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZonePlayersHeight))]
+    [NotifyPropertyChangedFor(nameof(ZonePlayersTitle))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedZone))]
+    private ZonePopulation? _selectedZone;
 
     /// <summary>
     /// Vue générale : les quatre continents côte à côte. Chacun conserve sa propre
@@ -63,6 +85,16 @@ public partial class PlayerMapViewModel : ObservableObject
 
     public bool ShowPlayers => !ShowZones;
     public bool ShowSingle => !Overview;
+    public bool HasSelectedZone => SelectedZone is not null;
+
+    /// <summary>La section ne prend de la place que lorsqu'une zone est retenue.</summary>
+    public System.Windows.GridLength ZonePlayersHeight => SelectedZone is null
+        ? new System.Windows.GridLength(0)
+        : new System.Windows.GridLength(1, System.Windows.GridUnitType.Star);
+
+    public string ZonePlayersTitle => SelectedZone is null
+        ? ""
+        : $"{SelectedZone.ZoneName} — {SelectedZone.Total} joueur(s)";
 
     public System.Windows.GridLength PanelWidth =>
         PanelCollapsed ? new System.Windows.GridLength(0) : new System.Windows.GridLength(300);
@@ -100,12 +132,22 @@ public partial class PlayerMapViewModel : ObservableObject
             return;
         }
 
+        _pending?.Cancel();
+        var cts = new CancellationTokenSource();
+        _pending = cts;
+
         IsBusy = true;
         try
         {
             var (placed, elsewhere) = await _map.OnlinePlayersAsync(IncludeOffline);
+            var zones = await _map.ZonePopulationAsync(IncludeOffline);
+
+            // Un chargement plus récent a été demandé : le sien fait foi, et toucher aux
+            // collections ici les laisserait à moitié remplies.
+            if (cts.IsCancellationRequested) return;
+
             _placed = placed;
-            _zones = await _map.ZonePopulationAsync(IncludeOffline);
+            _zones = zones;
 
             Elsewhere.Clear();
             foreach (var p in elsewhere) Elsewhere.Add(p);
@@ -115,17 +157,27 @@ public partial class PlayerMapViewModel : ObservableObject
 
             RefreshMarkers();
 
+            // La zone retenue est reprise sur les données fraîches : garder l'ancien objet
+            // afficherait des effectifs périmés à côté d'une liste à jour.
+            SelectedZone = SelectedZone is { } previous
+                ? _zones.FirstOrDefault(z => z.ZoneId == previous.ZoneId)
+                : null;
+
             var total = placed.Count + elsewhere.Count;
             Status = total == 0
                 ? IncludeOffline ? "Aucun personnage." : "Aucun joueur connecté."
                 : $"{total} personnage(s) sur {_zones.Count} zone(s) — " +
                   $"{elsewhere.Count} hors des quatre continents";
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             Status = "Erreur : " + ex.Message;
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            if (_pending == cts) IsBusy = false;
+        }
     }
 
     private void RefreshMarkers()
@@ -173,6 +225,29 @@ public partial class PlayerMapViewModel : ObservableObject
         image.Freeze();
         return image;
     }
+
+    /// <summary>
+    /// Les joueurs sont cherchés dans les deux collections : une zone peuplée peut être
+    /// non projetable — les départs draeneï et elfe de sang, par exemple —, et ses joueurs
+    /// se trouvent alors avec les autres, pas parmi les marqueurs de la carte.
+    /// </summary>
+    partial void OnSelectedZoneChanged(ZonePopulation? value)
+    {
+        ZonePlayers.Clear();
+        if (value is null) return;
+
+        foreach (var p in _placed.Concat(Elsewhere)
+                                 .Where(p => p.ZoneId == value.ZoneId)
+                                 .OrderByDescending(p => p.Level)
+                                 .ThenBy(p => p.Name))
+            ZonePlayers.Add(p);
+    }
+
+    [RelayCommand]
+    private void SelectZone(ZonePopulation? zone) => SelectedZone = zone;
+
+    [RelayCommand]
+    private void ClearZone() => SelectedZone = null;
 
     partial void OnContinentChanged(Continent? value) => RefreshMarkers();
 
