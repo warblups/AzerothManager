@@ -413,4 +413,52 @@
         </Style.Triggers>
     </Style>
 
+    <!--
+        En-tête de groupe du rail de navigation. Pas d'emoji ici, contrairement aux entrées :
+        c'est un intitulé de section, et le distinguer visuellement du niveau en dessous vaut
+        mieux que de répéter la convention. Le chevron est à gauche, là où l'œil le cherche
+        en parcourant une arborescence.
+    -->
+    <Style x:Key="NavGroup" TargetType="Expander">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel>
+                        <ToggleButton Focusable="False" Cursor="Hand"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="bd" Background="Transparent" Padding="9,7,10,4">
+                                        <DockPanel>
+                                            <TextBlock x:Name="glyph" DockPanel.Dock="Left" Text="▾"
+                                                       FontSize="10" Width="13" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource Muted}" />
+                                            <ContentPresenter VerticalAlignment="Center" />
+                                        </DockPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="False">
+                                            <Setter TargetName="glyph" Property="Text" Value="▸" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Surface}" />
+                                            <Setter TargetName="glyph" Property="Foreground" Value="{StaticResource Text}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                            <ContentPresenter ContentSource="Header" />
+                        </ToggleButton>
+                        <ContentPresenter x:Name="body" Visibility="Collapsed" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="body" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

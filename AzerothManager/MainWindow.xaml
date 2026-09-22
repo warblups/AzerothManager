@@ -34,18 +34,65 @@
         <!-- Rail de navigation + contenu -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="228" />
+                <ColumnDefinition Width="244" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="{StaticResource Panel}"
                     BorderBrush="{StaticResource BorderB}" BorderThickness="0,0,1,0">
+                <!--
+                    Une seule liste, groupée par catégorie : la sélection unique et la
+                    navigation au clavier restent celles d'un ListBox. Une liste par groupe
+                    aurait fait perdre les deux.
+                -->
                 <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                          Background="Transparent" Margin="0,6">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.ContainerStyle>
+                                <Style TargetType="GroupItem">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="GroupItem">
+                                                <!-- Name est la clé de groupe, donc la NavigationCategory elle-même. -->
+                                                <Expander Style="{StaticResource NavGroup}"
+                                                          IsExpanded="{Binding Name.IsExpanded, Mode=TwoWay}">
+                                                    <Expander.Header>
+                                                        <DockPanel>
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}"
+                                                                       Style="{StaticResource Caption}"
+                                                                       Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding Name.Title}"
+                                                                       FontSize="11" FontWeight="SemiBold">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{StaticResource Muted}" />
+                                                                        <Style.Triggers>
+                                                                            <!-- Groupe du module affiché : repère le seul lieu
+                                                                                 visible quand tout est replié. -->
+                                                                            <DataTrigger Binding="{Binding Name.IsCurrent}" Value="True">
+                                                                                <Setter Property="Foreground" Value="{StaticResource Accent}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </DockPanel>
+                                                    </Expander.Header>
+                                                    <ItemsPresenter />
+                                                </Expander>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </GroupStyle.ContainerStyle>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
-                            <Setter Property="Padding" Value="10,6" />
+                            <!-- Retrait à gauche : l'entrée se lit comme fille de son groupe. -->
+                            <Setter Property="Padding" Value="20,5,10,5" />
                             <Setter Property="Foreground" Value="{StaticResource Text}" />
                         </Style>
                     </ListBox.ItemContainerStyle>
