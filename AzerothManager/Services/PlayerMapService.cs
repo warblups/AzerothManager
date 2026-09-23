@@ -60,9 +60,15 @@ public sealed class PlayerMapService
             var continent = Continent.ForMap(mapId);
             var (x, y) = continent?.Project(worldX, worldY) ?? (0, 0);
 
+            // La zone est celle de la position, comme pour les effectifs : la liste d'une
+            // bulle filtre dessus, et characters.zone ne coïncide pas avec elle — elle a
+            // laissé vide la liste d'une zone annoncée à trois joueurs. Hors des rectangles
+            // connus (instance, donjon), la colonne reste le seul nom disponible.
+            var zone = _client.ZoneAt(mapId, worldX, worldY);
             var player = new PlayerPosition(
                 rd.GetInt32(0), rd.GetString(1), rd.GetInt32(2), rd.GetInt32(3), rd.GetInt32(4),
-                mapId, zoneId, _client.AreaName(zoneId), worldX, worldY, x, y);
+                mapId, zone?.AreaId ?? 0, _client.AreaName(zone?.AreaId ?? zoneId),
+                worldX, worldY, x, y);
 
             if (continent is null) elsewhere.Add(player);
             else placed.Add(player);
@@ -90,7 +96,7 @@ public sealed class PlayerMapService
 
         foreach (var player in placed.Concat(elsewhere))
         {
-            var zone = _client.ZoneAt(player.MapId, player.WorldX, player.WorldY);
+            var zone = player.ZoneId == 0 ? null : _client.ZoneCenter(player.ZoneId);
             if (zone is null)
             {
                 if (player.IsAlliance) unknownAlliance++; else unknownHorde++;

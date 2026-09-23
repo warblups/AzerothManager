@@ -41,7 +41,10 @@ public sealed record Continent(
     public static Continent? ForMap(int mapId) => All.FirstOrDefault(c => c.MapId == mapId);
 }
 
-/// <summary>Joueur connecté, projeté sur la carte de son continent.</summary>
+/// <summary>
+/// Joueur connecté, projeté sur la carte de son continent. <see cref="ZoneId"/> est la zone
+/// déduite de la position, pas characters.zone : 0 hors de tout rectangle connu.
+/// </summary>
 public sealed record PlayerPosition(
     int Guid, string Name, int Level, int Race, int Class,
     int MapId, int ZoneId, string ZoneName,

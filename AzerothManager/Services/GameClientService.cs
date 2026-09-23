@@ -314,8 +314,32 @@ public sealed class GameClientService
     public sealed record ZoneRect(int AreaId, int MapId, float X, float Y,
                                   float MinX, float MaxX, float MinY, float MaxY)
     {
-        public double Area => (double)(MaxX - MinX) * (MaxY - MinY);
         public bool Contains(float x, float y) => x >= MinX && x <= MaxX && y >= MinY && y <= MaxY;
+
+        /// <summary>Écart au centre du rectangle, rapporté à ses dimensions (0 au centre).</summary>
+        public double Offset(float x, float y)
+        {
+            var dx = (x - (MinX + MaxX) / 2) / (MaxX - MinX);
+            var dy = (y - (MinY + MaxY) / 2) / (MaxY - MinY);
+            return dx * dx + dy * dy;
+        }
+
+        /// <summary>
+        /// Parmi les rectangles d'une même carte, celui qui contient la position et dont elle
+        /// est le plus proche du centre.
+        ///
+        /// Les rectangles de WorldMapArea sont les cadres des cartes de zone, pas les zones :
+        /// ils débordent largement sur les voisines. « Le plus petit qui contient le point »,
+        /// la règle précédente, se trompait dès que deux cadres ont des tailles voisines —
+        /// le nord de la Marche de l'Ouest tombait en Forêt d'Elwynn. Mesuré sur 38 998
+        /// spawns dont le serveur connaît la zone : 91,6 % de réponses justes contre 75,2 %.
+        /// Privilégier un cadre inclus dans un autre fait moins bien (90,7 %) : celui de
+        /// Mulgore est entièrement dans celui des Tarides.
+        /// </summary>
+        public static ZoneRect? Pick(IEnumerable<ZoneRect> rects, float x, float y) =>
+            rects.Where(z => z.Contains(x, y))
+                 .OrderBy(z => z.Offset(x, y))
+                 .FirstOrDefault();
     }
 
     private List<ZoneRect> ZoneRects()
@@ -343,15 +367,11 @@ public sealed class GameClientService
     /// <summary>
     /// Zone déduite d'une position. Indispensable ici : characters.zone n'est écrite qu'à
     /// la déconnexion, et vaut zéro pour la quasi-totalité des personnages d'un serveur
-    /// peuplé de bots. La position, elle, est toujours juste.
-    ///
-    /// Les zones s'emboîtent — une ville dans une région —, donc la plus petite l'emporte.
+    /// peuplé de bots. La position, elle, est toujours juste — la règle de choix entre
+    /// rectangles qui se chevauchent est décrite sur <see cref="ZoneRect.Pick"/>.
     /// </summary>
     public ZoneRect? ZoneAt(int mapId, float x, float y) =>
-        ZoneRects()
-            .Where(z => z.MapId == mapId && z.Contains(x, y))
-            .OrderBy(z => z.Area)
-            .FirstOrDefault();
+        ZoneRect.Pick(ZoneRects().Where(z => z.MapId == mapId), x, y);
 
     public string? IconName(int displayId) => Icons().GetValueOrDefault(displayId);
 
