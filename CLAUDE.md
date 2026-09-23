@@ -126,6 +126,14 @@ Mais **la source n'est pas toujours cohérente avec elle-même** : le message d'
 
 Conséquence pratique : fermer l'application avant tout `dotnet build`, l'exécutable étant verrouillé.
 
+### Vérifier l'interface à l'écran, pas au compilateur
+
+**Un XAML qui compile ne prouve rien.** Un `GroupStyle`, un `MouseBinding` avec `RelativeSource`, une `StaticResource` mal nommée : tout cela produit une génération à zéro erreur et un écran vide ou inerte. Les défauts se voient en lançant l'application et en la regardant.
+
+La capture se fait depuis PowerShell : `GetWindowRect` sur le `MainWindowHandle` du processus, puis `Graphics.CopyFromScreen`. Pour aller plus loin, `SetCursorPos` et `mouse_event` suffisent à cliquer, ce qui permet d'atteindre un module, de charger des données et d'ouvrir un panneau sans toucher à la souris. Relever les coordonnées sur une première capture plutôt que de les estimer : le rail se décale dès qu'un groupe s'ouvre.
+
+Deux défauts trouvés ainsi le même jour, invisibles au build : un libellé du rail tronqué par le retrait des entrées, et « Elfe de la nuit » coupé dans un panneau de 300 px — corrigé en retirant une colonne au profit d'une infobulle.
+
 Pour seulement **vérifier que le code compile** sans demander la fermeture de l'application, copier le projet (sans `bin/` ni `obj/`) dans un dossier temporaire et y lancer `dotnet build`. Rediriger `BaseOutputPath`/`BaseIntermediateOutputPath` **ne marche pas** : WPF génère alors les `*.g.cs` dans les deux `obj` et le compilateur voit chaque `InitializeComponent` en double (443 erreurs `CS0111`/`CS0102`). La copie complète, elle, compile proprement.
 
 ## Canal d'exécution : console GM ou SQL (CdC §5)
