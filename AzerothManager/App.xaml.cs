@@ -64,8 +64,10 @@ public partial class App : Application
         var teleportService = new TeleportService(mySql, gm, context, gameClient);
         var worldEditService = new WorldEditService(mySql, context, gameClient);
         var logService = new LogService(context, ssh);
-        var announceService = new AnnounceService(gm, mySql, ssh, context);
+        var worldConfig = new WorldServerConfig(ssh, context);
+        var announceService = new AnnounceService(gm, mySql, worldConfig, context);
         var guildService = new GuildService(mySql, gm, context);
+        var inventoryService = new InventoryService(mySql, gm, mailService, worldConfig, context);
         var gameEventService = new GameEventService(mySql, gm, context);
         var instanceLockService = new InstanceLockService(mySql, gm, context, gameClient);
 
@@ -96,9 +98,11 @@ public partial class App : Application
         var logs = new LogsViewModel(logService, context);
         var announce = new AnnounceViewModel(announceService, context);
         var guilds = new GuildsViewModel(guildService, context);
+        var inventory = new InventoryViewModel(armoryService, inventoryService, context,
+            () => new ItemCatalogViewModel(itemCatalog, context, gameClient));
         var gameEvents = new GameEventsViewModel(gameEventService, context);
         var instanceLocks = new InstanceLocksViewModel(instanceLockService, context);
-        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce, guilds, gameEvents, instanceLocks);
+        var main = new MainViewModel(context, serverConfig, gmConsole, sqlConsole, catalog, accounts, mail, armory, inventory, tickets, restore, playerMap, charactersVm, moderation, teleport, worldEdit, logs, announce, guilds, gameEvents, instanceLocks);
 
         new MainWindow { DataContext = main }.Show();
     }

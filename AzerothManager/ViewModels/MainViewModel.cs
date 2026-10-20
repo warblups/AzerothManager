@@ -74,6 +74,7 @@ public partial class MainViewModel : ObservableObject
                          AccountsViewModel accounts,
                          MailViewModel mail,
                          ArmoryViewModel armory,
+                         InventoryViewModel inventory,
                          TicketsViewModel tickets, RestoreViewModel restore,
                          PlayerMapViewModel playerMap,
                          CharactersViewModel characters,
@@ -104,6 +105,8 @@ public partial class MainViewModel : ObservableObject
         Add(players, "👤", "Comptes", "v1.0", accounts);
         Add(players, "🧙", "Personnages", "v1.0", characters);
         Add(players, "⚔", "Armurerie", "v1.1", armory);
+        // 🧳 plutôt que 🎒 : le sac à dos est déjà l'icône du catalogue d'objets.
+        Add(players, "🧳", "Inventaire et banque", "v1.1", inventory);
         Add(players, "🏰", "Guildes", "v1.1", guilds);
         Add(players, "🛡", "Modération", "v1.0", moderation);
 

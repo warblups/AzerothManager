@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:v="clr-namespace:AzerothManager.Views"
              Background="{StaticResource Bg}">
 
     <Grid Margin="12">
@@ -98,7 +99,7 @@
                     </StackPanel>
                 </Grid>
                 <TextBlock Text="Mot de passe (chiffré DPAPI à l'enregistrement)" Style="{StaticResource Caption}" />
-                <TextBox Text="{Binding MySqlPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+                <PasswordBox v:PasswordBoxBehaviour.BoundPassword="{Binding MySqlPassword, UpdateSourceTrigger=PropertyChanged}" />
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -139,7 +140,7 @@
                     </StackPanel>
                 </Grid>
                 <TextBlock Text="Mot de passe" Style="{StaticResource Caption}" />
-                <TextBox Text="{Binding SshPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+                <PasswordBox v:PasswordBoxBehaviour.BoundPassword="{Binding SshPassword, UpdateSourceTrigger=PropertyChanged}" />
 
                 <TextBlock Text="SOAP — commandes GM" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Compte de jeu de niveau administrateur (gmlevel 3), pas l'utilisateur MySQL."
@@ -160,7 +161,7 @@
                     </StackPanel>
                 </Grid>
                 <TextBlock Text="Mot de passe du compte" Style="{StaticResource Caption}" />
-                <TextBox Text="{Binding SoapPassword, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
+                <PasswordBox v:PasswordBoxBehaviour.BoundPassword="{Binding SoapPassword, UpdateSourceTrigger=PropertyChanged}" />
                 <CheckBox IsChecked="{Binding SoapThroughSshTunnel}"
                           Content="Passer par un tunnel SSH" />
                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"

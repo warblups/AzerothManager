@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text.RegularExpressions;
 using AzerothManager.Models;
 
 namespace AzerothManager.Services;
@@ -22,14 +20,14 @@ public sealed class AnnounceService
 {
     private readonly GmCommandService _gm;
     private readonly MySqlService _mySql;
-    private readonly SshService _ssh;
+    private readonly WorldServerConfig _config;
     private readonly ServerContext _context;
 
-    public AnnounceService(GmCommandService gm, MySqlService mySql, SshService ssh, ServerContext context)
+    public AnnounceService(GmCommandService gm, MySqlService mySql, WorldServerConfig config, ServerContext context)
     {
         _gm = gm;
         _mySql = mySql;
-        _ssh = ssh;
+        _config = config;
         _context = context;
     }
 
@@ -299,48 +297,21 @@ public sealed class AnnounceService
     }
 
     /// <summary>
-    /// Lit l'état de la diffusion automatique dans `worldserver.conf` — localement sur un
-    /// serveur Windows, par SSH sur un serveur Linux (§14).
-    ///
-    /// C'est de la consultation de configuration, pas de la gestion : la frontière du §3
-    /// tient. Sans elle, une annonce récurrente ajoutée alors que `AutoBroadcast.On = 0`
-    /// passerait pour un dysfonctionnement de l'application.
+    /// Lit l'état de la diffusion automatique dans `worldserver.conf`. Sans lui, une annonce
+    /// récurrente ajoutée alors que `AutoBroadcast.On = 0` passerait pour un dysfonctionnement
+    /// de l'application.
     /// </summary>
     public async Task<AutoBroadcastConfig?> ReadBroadcastConfigAsync(CancellationToken ct = default)
     {
-        var p = _context.RequireActive();
-        var root = p.ServerPath.TrimEnd('/', '\\');
-        if (root.Length == 0) return null;
-
-        var separator = p.UsesSsh ? "/" : "\\";
-        var path = $"{root}{separator}etc{separator}worldserver.conf";
-
-        string content;
-        try
-        {
-            content = p.UsesSsh
-                ? await _ssh.RunAsync($"grep -E '^AutoBroadcast\\.' \"{path}\"", ct)
-                : await File.ReadAllTextAsync(path, ct);
-        }
-        catch
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(content)) return null;
+        var read = await _config.ReadAsync("AutoBroadcast.", ct);
+        if (read is null) return null;
+        var (content, path) = read.Value;
 
         return new AutoBroadcastConfig(
-            Enabled: ReadOption(content, "On") == 1,
-            TimerMs: ReadOption(content, "Timer") ?? 0,
-            Centered: ReadOption(content, "Center") == 1,
+            Enabled: WorldServerConfig.Option(content, "AutoBroadcast.On") == 1,
+            TimerMs: WorldServerConfig.Option(content, "AutoBroadcast.Timer") ?? 0,
+            Centered: WorldServerConfig.Option(content, "AutoBroadcast.Center") == 1,
             Source: path);
-    }
-
-    private static int? ReadOption(string content, string name)
-    {
-        var match = Regex.Match(content, $@"^\s*AutoBroadcast\.{name}\s*=\s*(-?\d+)",
-                                RegexOptions.Multiline);
-        return match.Success && int.TryParse(match.Groups[1].Value, out var value) ? value : null;
     }
 
     /// <summary>

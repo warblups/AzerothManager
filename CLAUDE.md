@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## État actuel du projet
 
-Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt**, **Guildes**, **Événements de jeu** et **Verrous d'instance**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
+Solution scaffoldée et fonctionnelle. Modules en place : **Configuration des serveurs**, **Console SQL**, **Console GM (SOAP)**, **Catalogue d'objets**, **Comptes**, **Courrier en jeu**, **Armurerie**, **Tickets GM**, **Restauration ciblée**, **Carte des joueurs**, **Personnages**, **Modération**, **Téléportation**, **Édition du monde**, **Logs**, **Annonces et arrêt**, **Guildes**, **Inventaire et banque**, **Événements de jeu** et **Verrous d'instance**. **Le socle v1.0 est complet**, et le rail de navigation n'a plus d'entrée désactivée : l'armurerie et les modules v1.1/v1.2 déjà construits ont été avancés grâce à la brique DBC.
 
 La référence fonctionnelle est `Cahier_des_Charges_AzerothCore_Admin_Manager_V1.2.docx` (24 sections). Les V1 et V1.1 sont conservées comme historique et sont périmées : ne pas s'y fier. Le cahier des charges est la source de vérité et il est rédigé en français — la documentation, les commentaires et les libellés d'interface le sont aussi.
 
-**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **royaumes** (`auth.realmlist`), **réputations**, **inventaire et banque de personnage**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
+**Prochaine étape** : plus aucun module du rail n'est en attente. Restent au cahier des charges, non commencés : **royaumes** (`auth.realmlist`), **réputations**, **quêtes**, **playerbots**, **économie et anti-triche**, puis la v2.0. Métiers/sorts et modification en direct sont **abandonnés en l'état** : leurs commandes sont toutes `Console::No` — voir la section « Ce que SOAP ne peut pas faire ».
 
 Conventions déjà établies dans le code, à suivre :
 
@@ -43,7 +43,8 @@ AzerothCoreManager
 │                  AccountService, CharacterService, MailService,
 │                  ModerationService, TicketService, RestoreService,
 │                  WorldEditService, TeleportService,
-│                  ItemCatalogService, ArmoryService, SqlEditorService
+│                  ItemCatalogService, ArmoryService, InventoryService,
+│                  SqlEditorService, WorldServerConfig
 ├── Data           (SQLite local)
 └── Assets
 ```
@@ -79,7 +80,7 @@ Deux écarts assumés : le bandeau Production est en `#8e1d2d`, plus sombre que 
 
 - **Densité avant décoration.** Grilles compactes, colonnes triables et redimensionnables, largeurs mémorisées. Pas d'animation décorative, pas de police fantaisie.
 - **Icônes emoji, comme AzerothUpdater** — convention commune aux deux applications : emoji, deux espaces, libellé (`🖥  Serveurs`). Décision de l'auteur, pour que les deux outils forment un ensemble. Dans le rail, l'emoji vit dans `NavigationItem.Icon`, pas dans `Title`. Deux modules ne partagent pas la même icône : la carte des joueurs porte `🧭`, l'édition du monde gardant `🗺`.
-- **Le rail est groupé et replié par défaut.** Dix-neuf modules ne se parcourent pas d'un coup d'œil : ils sont rangés en cinq catégories — Serveur, Comptes et personnages, Support, Monde, Outils — choisies sur la nature du travail, pas sur les versions du cahier des charges. Points à respecter :
+- **Le rail est groupé et replié par défaut.** Vingt modules ne se parcourent pas d'un coup d'œil : ils sont rangés en cinq catégories — Serveur, Comptes et personnages, Support, Monde, Outils — choisies sur la nature du travail, pas sur les versions du cahier des charges. Points à respecter :
   - **Une seule `ListBox`, groupée par `CollectionViewSource`**, et non une liste par catégorie : c'est ce qui préserve la sélection unique et la navigation au clavier. Le `GroupStyle` remplace le `GroupItem` par un `Expander` (style `NavGroup` du thème).
   - **La clé de groupe est l'objet `NavigationCategory`**, pas son intitulé : l'en-tête lie alors directement `Name.IsExpanded`, WPF exposant la clé de groupe sous le nom `Name`.
   - La préférence `nav.expanded` de la table `Settings` retient **ce qui est déplié**, pas ce qui est replié. Enregistrer l'ouverture donne le bon défaut des deux côtés : rien n'est ouvert au premier lancement, et un module ajouté plus tard arrive replié comme les autres.
@@ -375,6 +376,29 @@ Annonces récurrentes — `.autobroadcast list|add|remove|locale`, toutes `Conso
 - La table est **`auth.autobroadcast`**, pas dans `world` : les commandes passent par `LoginDatabase` et filtrent sur `realmid`, la valeur `-1` valant tous les royaumes. La liste est lue en SQL plutôt qu'en analysant la sortie de `.autobroadcast list`, pour récupérer identifiant et poids exploitables.
 - **Aucun `.reload` à proposer** : `HandleAutobroadcastAddCommand` et `…Remove…` appellent eux-mêmes `sAutobroadcastMgr->LoadAutobroadcasts()`. La règle « écriture dans `world` → `.reload` » du §9 ne s'applique pas ici, et un bouton `.reload` serait redondant.
 - **`AutoBroadcast.On = 0` sur le serveur de référence** : une annonce ajoutée part en base et n'est jamais diffusée. Le module lit `AutoBroadcast.On`, `Timer` et `Center` dans `worldserver.conf` (localement sous Windows, par SSH sous Linux) et l'annonce — sans quoi l'absence de diffusion passerait pour un défaut de l'application. C'est de la consultation de configuration, pas de la gestion : la frontière du §3 tient.
+
+## Inventaire et banque (CdC §8)
+
+Le module répond à « j'ai perdu mon objet ». D'où son périmètre : **tout ce qui appartient au personnage**, et pas seulement ses poches. Un objet « perdu » attend souvent au courrier ou à l'hôtel des ventes, et ne pas l'y chercher ferait conclure à une disparition. Consultation en SQL, écritures par commande GM, comme les guildes.
+
+Schéma vérifié sur le serveur réel :
+
+- **`character_inventory.bag` vaut 0 pour le personnage, sinon c'est le guid de l'`item_instance` du sac**, pas un numéro d'emplacement. Pour savoir si le contenu d'un sac est porté ou en banque, il faut d'abord relever l'emplacement du sac lui-même : c'est le piège principal de la table, isolé dans `InventoryLayout.Locate` et couvert par les tests.
+- Plages de `Player.h` : 0-18 équipement, 19-22 sacs portés, 23-38 sac à dos, 39-66 banque, 67-73 sacs de banque, 74-85 rachat, 86-117 trousseau, 118-149 monnaies.
+- **Les emplacements de rachat ne sont jamais en base** : `_SaveInventory` les efface à chaque sauvegarde. Un objet vendu n'existe donc en base que s'il a été archivé.
+- `item_instance.flags & 1` = lié (`ITEM_FIELD_FLAG_SOULBOUND`) ; `creatorGuid` est un guid de personnage.
+- `mail_items.receiver` est dénormalisé : on filtre dessus sans passer par `mail`. Seul `messageType = 0` porte un guid de personnage en `sender` (2 hôtel des ventes, 3 PNJ, 4 objet, 5 calendrier — `Mail.h`).
+- `auctionhouse.time` est l'échéance de l'enchère. **Un personnage de l'AHbot porte plus de 45 000 enchères** : la section est plafonnée (`InventoryService.AuctionLimit`) et l'en-tête annonce le total réel.
+- La banque, le courrier et `recovery_item` sont vides sur le serveur de référence ; 2 234 personnages, bots compris.
+
+Commandes, lues dans `cs_misc.cpp` et `cs_item.cpp`, toutes `Console::Yes` :
+
+- **`.additem <joueur> <id> <n>` n'ajoute qu'à un joueur connecté** (`LANG_PLAYER_NOT_FOUND` sinon). Hors ligne, l'objet part par courrier (`MailService`) au lieu d'échouer, et l'interface annonce le canal pris.
+- **`.additem <joueur> <id> -<n>` retire, connecté ou non.** Hors ligne, le serveur écrit lui-même en base et nettoie les tables satellites (cadeau, remboursement, échange lié, `item_loot_storage`). Le retrait se fait **par modèle, jamais par pile** : on ne peut pas viser un exemplaire. En ligne, l'ordre est fixe (sac à dos, trousseau, sacs, équipement, banque) ; hors ligne, la requête n'a pas d'`ORDER BY` et **épargne un sac qui contient encore des objets**. Le courrier et l'hôtel des ventes ne sont jamais touchés. La confirmation annonce le total d'exemplaires concernés.
+- **`.item restore <id> <joueur>`** renvoie par courrier une ligne de `recovery_item` ; `.item restore list` n'est pas utilisée, la table étant lue en SQL.
+- Aucune écriture SQL ici : un `DELETE` laisserait l'objet en mémoire chez un joueur connecté, et le serveur le réécrirait à la sauvegarde suivante.
+
+**Archivage : `ItemDelete.Method` commande tout.** La destruction comme la vente passent par `WorldSession::recoveryItem`, qui ne range rien si `Method` vaut 0 ; `Vendor` ne fait qu'y ajouter les ventes, et le rachat au marchand retire l'archive. **`Vendor = 1` seul est un piège** : `.item restore` est alors accepté (`HasItemDeletionConfig` teste `Method || Vendor`) mais la table reste vide. Seuils par défaut : qualité rare (3) et niveau d'objet 80, conservation illimitée (`KeepDays = 0`). Le serveur de référence a tout à 0. Le module lit ces réglages par `WorldServerConfig`, **le lecteur de `worldserver.conf` commun avec les annonces**, et le dit plutôt que de montrer une liste vide sans explication.
 
 ## Guildes et banque de guilde (CdC §8 et §9)
 
